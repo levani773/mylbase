@@ -7,7 +7,8 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, "aura_db.json");
+const DB_DIR = process.env.NODE_ENV === "production" ? "/data" : __dirname;
+const DB_PATH = path.join(DB_DIR, "aura_db.json");
 
 // Initial DB Structure
 const INITIAL_DB = {
