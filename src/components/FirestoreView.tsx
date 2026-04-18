@@ -146,16 +146,17 @@ export const FirestoreView: React.FC = () => {
       <PageHeader 
         title="Firestore Database" 
         subtitle="NoSQL cloud database powered by the local AuraDB Engine"
-      >
-        <button 
-          onClick={syncSupabase}
-          disabled={isSyncing}
-          className="flex items-center gap-2 bg-[#1A1A20] hover:bg-[#25252D] border border-[#2F2F37] text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
-        >
-          {isSyncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <DatabaseZap className="w-3 h-3 text-blue-500" />}
-          Sync Supabase
-        </button>
-      </PageHeader>
+        action={
+          <button 
+            onClick={syncSupabase}
+            disabled={isSyncing}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+          >
+            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DatabaseZap className="w-4 h-4" />}
+            Sync from Supabase
+          </button>
+        }
+      />
 
       <div className="flex-1 min-h-0 bg-[#0F0F12] border border-[#1F1F23] rounded-2xl overflow-hidden flex shadow-2xl shadow-black/40">
         {/* Collections */}
