@@ -5,7 +5,13 @@ import { motion } from 'motion/react';
 import { User } from '../types';
 import { io } from 'socket.io-client';
 
-const socket = io({ transports: ['websocket', 'polling'] });
+const socket = io({ 
+  transports: ['websocket', 'polling'],
+  reconnectionAttempts: 5,
+  timeout: 10000 
+});
+
+console.log('AuraDB: Socket instance created');
 
 export const AuthView: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
