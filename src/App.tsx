@@ -23,6 +23,10 @@ export default function App() {
   const [errorInfo, setErrorInfo] = useState<string>('');
 
   React.useEffect(() => {
+    // Flag that the app has successfully rendered to suppress environment noise in index.html
+    const root = document.getElementById('root');
+    if (root) root.setAttribute('data-loaded', 'true');
+
     const errorHandler = (event: ErrorEvent) => {
       setHasError(true);
       setErrorInfo(event.message || 'Unknown runtime error');

@@ -5,13 +5,16 @@ import { motion } from 'motion/react';
 import { User } from '../types';
 import { io } from 'socket.io-client';
 
-const socket = io({ 
-  transports: ['websocket', 'polling'],
-  reconnectionAttempts: 5,
-  timeout: 10000 
-});
-
-console.log('AuraDB: Socket instance created');
+let socket: any;
+try {
+  socket = io({ 
+    transports: ['polling', 'websocket'],
+    reconnectionAttempts: 5,
+    timeout: 10000 
+  });
+} catch (e) {
+  console.warn('Socket init failed', e);
+}
 
 export const AuthView: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -24,17 +27,19 @@ export const AuthView: React.FC = () => {
   useEffect(() => {
     fetchUsers();
 
-    const handleSync = (event: any) => {
-      if (event.type === 'auth_changed') {
-        setUsers(event.data);
-      }
-    };
+    if (socket) {
+      const handleSync = (event: any) => {
+        if (event.type === 'auth_changed') {
+          setUsers(event.data);
+        }
+      };
 
-    socket.on('aura_sync', handleSync);
+      socket.on('aura_sync', handleSync);
 
-    return () => {
-      socket.off('aura_sync', handleSync);
-    };
+      return () => {
+        socket.off('aura_sync', handleSync);
+      };
+    }
   }, []);
 
   const fetchUsers = async () => {
