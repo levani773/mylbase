@@ -239,14 +239,12 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, "dist");
+    const distPath = path.join(process.cwd(), "dist");
     
     // Check if dist exists
     try {
       await fs.access(distPath);
       console.log(`✅ Production Mode: Serving static files from ${distPath}`);
-      const files = await fs.readdir(distPath);
-      console.log(`📂 Files in dist: ${files.join(', ')}`);
     } catch (e) {
       console.error(`❌ Production Mode Error: dist directory NOT FOUND at ${distPath}`);
     }
