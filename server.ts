@@ -240,6 +240,17 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, "dist");
+    
+    // Check if dist exists
+    try {
+      await fs.access(distPath);
+      console.log(`✅ Production Mode: Serving static files from ${distPath}`);
+      const files = await fs.readdir(distPath);
+      console.log(`📂 Files in dist: ${files.join(', ')}`);
+    } catch (e) {
+      console.error(`❌ Production Mode Error: dist directory NOT FOUND at ${distPath}`);
+    }
+
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
