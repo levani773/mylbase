@@ -51,18 +51,24 @@ async function ensureDB() {
   }
 }
 
+let cachedDB: any = null;
+
 async function getDB() {
+  if (cachedDB) return cachedDB;
   const data = await fs.readFile(DB_PATH, "utf-8");
-  const db = JSON.parse(data);
+  cachedDB = JSON.parse(data);
+  
   // Migrate existing DB if keys are missing
-  if (!db.stats) db.stats = INITIAL_DB.stats;
-  if (!db.rules) db.rules = INITIAL_DB.rules;
-  if (!db.functions) db.functions = INITIAL_DB.functions;
-  if (!db.apiKeys) db.apiKeys = INITIAL_DB.apiKeys;
-  return db;
+  if (!cachedDB.stats) cachedDB.stats = INITIAL_DB.stats;
+  if (!cachedDB.rules) cachedDB.rules = INITIAL_DB.rules;
+  if (!cachedDB.functions) cachedDB.functions = INITIAL_DB.functions;
+  if (!cachedDB.apiKeys) cachedDB.apiKeys = INITIAL_DB.apiKeys;
+  
+  return cachedDB;
 }
 
 async function saveDB(db: any) {
+  cachedDB = db;
   await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2));
 }
 
@@ -263,51 +269,6 @@ async function startServer() {
     db.apiKeys = (db.apiKeys || []).filter((k: any) => k.id !== req.params.id);
     await saveDB(db);
     res.json({ success: true });
-  });
-
-  // Supabase Migration Connector
-  app.post("/api/migrate/supabase", async (req, res) => {
-    const { table } = req.body;
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_KEY;
-
-    if (!url || !key) {
-      return res.status(400).json({ error: "Supabase credentials not configured in environment variables." });
-    }
-
-    try {
-      const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
-        headers: {
-          'apikey': key,
-          'Authorization': `Bearer ${key}`,
-          'Range': '0-999'
-        }
-      });
-
-      if (!response.ok) throw new Error(`Supabase error: ${response.statusText}`);
-      
-      const supData = await response.json();
-      const db = await getDB();
-      
-      const docs = supData.map((row: any) => ({
-        id: row.id?.toString() || row.uid?.toString() || Math.random().toString(36).substr(2, 9),
-        data: row
-      }));
-
-      const existingCollectionIndex = db.collections.findIndex((c: any) => c.id === table);
-      if (existingCollectionIndex > -1) {
-        db.collections[existingCollectionIndex].docs = docs;
-      } else {
-        db.collections.push({ id: table, docs });
-      }
-
-      await saveDB(db);
-      broadcastSync('db_changed', db.collections);
-      res.json({ success: true, count: docs.length });
-    } catch (err: any) {
-      console.error('Supabase Migration Error:', err);
-      res.status(500).json({ error: err.message });
-    }
   });
 
   // Analytics Stats

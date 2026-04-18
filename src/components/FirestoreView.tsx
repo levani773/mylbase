@@ -108,33 +108,6 @@ export const FirestoreView: React.FC = () => {
     }
   };
 
-  const syncSupabase = async () => {
-    const table = prompt("Enter Supabase table name to import (e.g., plants):", "plants");
-    if (!table) return;
-
-    try {
-      setIsSyncing(true);
-      setSaveStatus(`Syncing table '${table}' from Supabase...`);
-      const res = await fetch('/api/migrate/supabase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table })
-      });
-      const result = await res.json();
-      if (res.ok) {
-        setSaveStatus(`Success: Imported ${result.count} documents from Supabase!`);
-        fetchCollections();
-      } else {
-        throw new Error(result.error || 'Sync failed');
-      }
-    } catch (err: any) {
-      setSaveStatus(`Error: ${err.message}`);
-    } finally {
-      setIsSyncing(false);
-      setTimeout(() => setSaveStatus(null), 5000);
-    }
-  };
-
   if (loading) return (
     <div className="h-full flex items-center justify-center">
       <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -146,16 +119,6 @@ export const FirestoreView: React.FC = () => {
       <PageHeader 
         title="Firestore Database" 
         subtitle="NoSQL cloud database powered by the local AuraDB Engine"
-        action={
-          <button 
-            onClick={syncSupabase}
-            disabled={isSyncing}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
-          >
-            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <DatabaseZap className="w-4 h-4" />}
-            Sync from Supabase
-          </button>
-        }
       />
 
       <div className="flex-1 min-h-0 bg-[#0F0F12] border border-[#1F1F23] rounded-2xl overflow-hidden flex shadow-2xl shadow-black/40">
