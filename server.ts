@@ -129,6 +129,17 @@ async function startServer() {
 
   app.use(express.json());
 
+  // CORS Middleware
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-aura-key");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // Real-time Event Broadcaster
   const broadcastSync = (type: string, data: any) => {
     io.emit('aura_sync', { type, data });
