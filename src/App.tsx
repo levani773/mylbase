@@ -19,6 +19,36 @@ import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   const [activeService, setActiveService] = useState<Service>('auth');
+  const [hasError, setHasError] = useState(false);
+  const [errorInfo, setErrorInfo] = useState<string>('');
+
+  React.useEffect(() => {
+    const errorHandler = (event: ErrorEvent) => {
+      setHasError(true);
+      setErrorInfo(event.message || 'Unknown runtime error');
+    };
+    window.addEventListener('error', errorHandler);
+    return () => window.removeEventListener('error', errorHandler);
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0C] flex items-center justify-center p-8">
+        <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-xl max-w-2xl w-full text-center">
+          <div className="text-red-400 text-2xl font-bold mb-4">AuraDB Frontend Crash</div>
+          <div className="bg-black/40 p-4 rounded-lg font-mono text-xs text-red-300 text-left mb-6 overflow-auto">
+            {errorInfo}
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-3 rounded-lg text-sm font-bold transition-all"
+          >
+            Attempt Restoration
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const renderContent = () => {
     switch (activeService) {

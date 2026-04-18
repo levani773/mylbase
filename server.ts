@@ -226,6 +226,11 @@ async function startServer() {
     res.json(db.stats);
   });
 
+  // Debug Route
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", env: process.env.NODE_ENV, time: new Date().toISOString() });
+  });
+
   // Vite Middleware
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
@@ -234,7 +239,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path.resolve(__dirname, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
