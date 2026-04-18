@@ -82,9 +82,11 @@ async function startServer() {
 
   await ensureDB();
   
-  // Analytics Middleware
+  // Analytics Middleware & Request Logging
   app.use((req, res, next) => {
     const start = Date.now();
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    
     res.on('finish', () => {
       const duration = Date.now() - start;
       currentStats.requests++;
@@ -226,7 +228,12 @@ async function startServer() {
     res.json(db.stats);
   });
 
-  // Debug Route
+  // Debug & Log Routes
+  app.post("/api/log", (req, res) => {
+    console.error(`[BROWSER ERROR]`, req.body);
+    res.sendStatus(200);
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", env: process.env.NODE_ENV, time: new Date().toISOString() });
   });
@@ -256,7 +263,8 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`AuraDB Multi-Engine running on http://localhost:${PORT}`);
+    console.log(`🚀 AuraDB Platform LIVE at http://0.0.0.0:${PORT}`);
+    console.log(`🌐 Public URL: https://${process.env.RAILWAY_STATIC_URL || 'your-domain'}`);
   });
 }
 

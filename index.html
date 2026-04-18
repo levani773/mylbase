@@ -5,15 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Google AI Studio App</title>
   </head>
-  <body class="bg-[#0A0A0C]">
+  <body style="margin:0; background:#0A0A0C; color:#fff; font-family:sans-serif;">
     <div id="root">
-      <div style="height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; color: #3f3f46;">
-        <div style="text-align: center;">
-          <div style="font-size: 10px; font-weight: bold; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 1rem; color: #3b82f6;">AuraDB Platform</div>
-          <div style="font-size: 12px; font-style: italic; opacity: 0.5;">Establishing quantum link...</div>
+      <div style="height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;">
+        <div style="width:40px; height:40px; border:3px solid rgba(59,130,246,0.2); border-top-color:#3b82f6; border-radius:50%; animation:spin 1s linear infinite;"></div>
+        <div style="text-align:center;">
+          <div style="font-size:12px; font-weight:bold; letter-spacing:0.3em; text-transform:uppercase; color:#3b82f6; margin-bottom:8px;">AuraDB Platform</div>
+          <div style="font-size:11px; opacity:0.4; font-style:italic;">Establishing Quantum Link...</div>
         </div>
       </div>
     </div>
+    <style>
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        var errInfo = { msg: msg, url: url, line: line, col: col, stack: error ? error.stack : null };
+        console.error('AuraDB Error:', errInfo);
+        fetch('/api/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(errInfo)
+        }).catch(function(e) { console.error('Failed to log to server', e); });
+        return false;
+      };
+      window.onunhandledrejection = function(event) {
+        var msg = 'Unhandled Rejection: ' + (event.reason ? (event.reason.message || event.reason) : 'unknown');
+        fetch('/api/log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ msg: msg })
+        });
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
