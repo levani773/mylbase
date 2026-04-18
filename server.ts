@@ -39,6 +39,9 @@ const INITIAL_DB = {
 
 async function ensureDB() {
   try {
+    if (process.env.NODE_ENV === "production") {
+      await fs.mkdir(DB_DIR, { recursive: true });
+    }
     await fs.access(DB_PATH);
   } catch {
     await fs.writeFile(DB_PATH, JSON.stringify(INITIAL_DB, null, 2));
