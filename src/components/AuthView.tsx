@@ -5,11 +5,12 @@ import { motion } from 'motion/react';
 import { User } from '../types';
 import { io } from 'socket.io-client';
 
-const socket = io();
+const socket = io({ transports: ['websocket', 'polling'] });
 
 export const AuthView: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -17,24 +18,30 @@ export const AuthView: React.FC = () => {
   useEffect(() => {
     fetchUsers();
 
-    socket.on('aura_sync', (event) => {
+    const handleSync = (event: any) => {
       if (event.type === 'auth_changed') {
         setUsers(event.data);
       }
-    });
+    };
+
+    socket.on('aura_sync', handleSync);
 
     return () => {
-      socket.off('aura_sync');
+      socket.off('aura_sync', handleSync);
     };
   }, []);
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const res = await fetch('/api/auth/users');
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       setUsers(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || 'Failed to fetch users');
     } finally {
       setLoading(false);
     }
@@ -82,8 +89,26 @@ export const AuthView: React.FC = () => {
   );
 
   if (loading) return (
-    <div className="h-full flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+    <div className="h-full flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center gap-4">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <span className="text-zinc-500 text-xs font-medium uppercase tracking-widest">AuraDB Initializing...</span>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="h-full flex items-center justify-center min-h-[400px]">
+      <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-xl max-w-md text-center">
+        <div className="text-red-400 text-lg font-bold mb-2">Sync Error Detected</div>
+        <div className="text-zinc-400 text-sm mb-6">{error}</div>
+        <button 
+          onClick={fetchUsers}
+          className="bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all"
+        >
+          Re-establish Connection
+        </button>
+      </div>
     </div>
   );
 
