@@ -1,0 +1,6 @@
+{
+  "name": "AuraDB Platform",
+  "description": "A comprehensive BaaS management dashboard inspired by Firebase, featuring database exploring, authentication, storage, and AI-powered insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
