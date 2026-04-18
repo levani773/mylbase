@@ -222,6 +222,51 @@ async function startServer() {
     res.json(db.storage);
   });
 
+  // Supabase Migration Connector
+  app.post("/api/migrate/supabase", async (req, res) => {
+    const { table } = req.body;
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_KEY;
+
+    if (!url || !key) {
+      return res.status(400).json({ error: "Supabase credentials not configured in environment variables." });
+    }
+
+    try {
+      const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Range': '0-999'
+        }
+      });
+
+      if (!response.ok) throw new Error(`Supabase error: ${response.statusText}`);
+      
+      const supData = await response.json();
+      const db = await getDB();
+      
+      const docs = supData.map((row: any) => ({
+        id: row.id?.toString() || row.uid?.toString() || Math.random().toString(36).substr(2, 9),
+        data: row
+      }));
+
+      const existingCollectionIndex = db.collections.findIndex((c: any) => c.id === table);
+      if (existingCollectionIndex > -1) {
+        db.collections[existingCollectionIndex].docs = docs;
+      } else {
+        db.collections.push({ id: table, docs });
+      }
+
+      await saveDB(db);
+      broadcastSync('db_changed', db.collections);
+      res.json({ success: true, count: docs.length });
+    } catch (err: any) {
+      console.error('Supabase Migration Error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Analytics Stats
   app.get("/api/analytics/stats", async (req, res) => {
     const db = await getDB();

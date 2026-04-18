@@ -8,7 +8,8 @@ import {
   MoreHorizontal,
   Code,
   Save,
-  Loader2
+  Loader2,
+  DatabaseZap
 } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { cn } from '../lib/utils';
@@ -25,6 +26,7 @@ export const FirestoreView: React.FC = () => {
   const [selectedDocId, setSelectedDocId] = useState<string>('');
   const [jsonValue, setJsonValue] = useState('');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     fetchCollections();
@@ -106,6 +108,33 @@ export const FirestoreView: React.FC = () => {
     }
   };
 
+  const syncSupabase = async () => {
+    const table = prompt("Enter Supabase table name to import (e.g., plants):", "plants");
+    if (!table) return;
+
+    try {
+      setIsSyncing(true);
+      setSaveStatus(`Syncing table '${table}' from Supabase...`);
+      const res = await fetch('/api/migrate/supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table })
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setSaveStatus(`Success: Imported ${result.count} documents from Supabase!`);
+        fetchCollections();
+      } else {
+        throw new Error(result.error || 'Sync failed');
+      }
+    } catch (err: any) {
+      setSaveStatus(`Error: ${err.message}`);
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSaveStatus(null), 5000);
+    }
+  };
+
   if (loading) return (
     <div className="h-full flex items-center justify-center">
       <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
@@ -117,7 +146,16 @@ export const FirestoreView: React.FC = () => {
       <PageHeader 
         title="Firestore Database" 
         subtitle="NoSQL cloud database powered by the local AuraDB Engine"
-      />
+      >
+        <button 
+          onClick={syncSupabase}
+          disabled={isSyncing}
+          className="flex items-center gap-2 bg-[#1A1A20] hover:bg-[#25252D] border border-[#2F2F37] text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+        >
+          {isSyncing ? <Loader2 className="w-3 h-3 animate-spin" /> : <DatabaseZap className="w-3 h-3 text-blue-500" />}
+          Sync Supabase
+        </button>
+      </PageHeader>
 
       <div className="flex-1 min-h-0 bg-[#0F0F12] border border-[#1F1F23] rounded-2xl overflow-hidden flex shadow-2xl shadow-black/40">
         {/* Collections */}
