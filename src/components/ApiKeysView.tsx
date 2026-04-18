@@ -60,7 +60,23 @@ export const ApiKeysView: React.FC = () => {
   };
 
   const copyToClipboard = (text: string, id: string) => {
-    Navigator.prototype.clipboard ? navigator.clipboard.writeText(text) : console.log(text);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    } else {
+      // Fallback for environments where clipboard API is not available
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+      }
+      document.body.removeChild(textArea);
+    }
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
