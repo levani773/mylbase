@@ -9,7 +9,8 @@ import {
   Settings,
   ChevronRight,
   Zap,
-  Package
+  Package,
+  Key
 } from 'lucide-react';
 import { Service } from '../types';
 import { cn } from '../lib/utils';
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeService, onServiceChange
     { id: 'functions', label: 'Functions', icon: Code2 },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'sdk', label: 'Aura SDK', icon: Package },
+    { id: 'apikeys', label: 'API Keys', icon: Key },
   ];
 
   return (

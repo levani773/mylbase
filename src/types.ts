@@ -1,4 +1,11 @@
-export type Service = 'auth' | 'firestore' | 'storage' | 'hosting' | 'functions' | 'analytics' | 'rules' | 'sdk';
+export type Service = 'auth' | 'firestore' | 'storage' | 'hosting' | 'functions' | 'analytics' | 'rules' | 'sdk' | 'apikeys';
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  key: string;
+  created: string;
+}
 
 export interface User {
   uid: string;

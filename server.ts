@@ -15,6 +15,9 @@ const INITIAL_DB = {
   users: [
     { uid: 'u1', email: 'admin@aura.db', provider: 'google.com', created: 'Apr 10, 2026', lastLogin: 'Apr 18, 2026' },
   ],
+  apiKeys: [
+    { id: 'ak1', name: 'Encyclopedia App', key: 'aura_demo_key_773', created: 'Apr 18, 2026' }
+  ],
   collections: [
     {
       id: 'users',
@@ -55,6 +58,7 @@ async function getDB() {
   if (!db.stats) db.stats = INITIAL_DB.stats;
   if (!db.rules) db.rules = INITIAL_DB.rules;
   if (!db.functions) db.functions = INITIAL_DB.functions;
+  if (!db.apiKeys) db.apiKeys = INITIAL_DB.apiKeys;
   return db;
 }
 
@@ -75,7 +79,7 @@ async function startServer() {
   const io = new Server(httpServer, {
     cors: { origin: "*" }
   });
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
   
   // Set explicit Port for development/production
   app.set("port", PORT);
@@ -220,6 +224,34 @@ async function startServer() {
   app.get("/api/storage", async (req, res) => {
     const db = await getDB();
     res.json(db.storage);
+  });
+
+  // API Keys
+  app.get("/api/apikeys", async (req, res) => {
+    const db = await getDB();
+    res.json(db.apiKeys || []);
+  });
+
+  app.post("/api/apikeys", async (req, res) => {
+    const db = await getDB();
+    const { name } = req.body;
+    const newKey = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: name || 'Unnamed Key',
+      key: `aura_${Math.random().toString(36).substr(2, 12)}`,
+      created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    };
+    db.apiKeys = db.apiKeys || [];
+    db.apiKeys.unshift(newKey);
+    await saveDB(db);
+    res.json(newKey);
+  });
+
+  app.delete("/api/apikeys/:id", async (req, res) => {
+    const db = await getDB();
+    db.apiKeys = (db.apiKeys || []).filter((k: any) => k.id !== req.params.id);
+    await saveDB(db);
+    res.json({ success: true });
   });
 
   // Supabase Migration Connector

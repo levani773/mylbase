@@ -14,6 +14,7 @@ import { FunctionsView } from './components/FunctionsView';
 import { HostingView } from './components/HostingView';
 import { RulesView } from './components/RulesView';
 import { SDKView } from './components/SDKView';
+import { ApiKeysView } from './components/ApiKeysView';
 import { Service } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -72,6 +73,8 @@ export default function App() {
         return <RulesView />;
       case 'sdk':
         return <SDKView />;
+      case 'apikeys':
+        return <ApiKeysView />;
       default:
         return <AuthView />;
     }
