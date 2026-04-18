@@ -109,7 +109,7 @@ export default function App() {
             <a href="#" className="hover:text-zinc-400 transition-colors">Status</a>
           </div>
           <div className="text-[10px] font-mono text-zinc-700">
-            Node: aura-worker-v4.2 | v1.23.0-stable
+            Node: aura-worker-v5.0 | v1.24.0-supabase-ready
           </div>
         </footer>
       </main>
