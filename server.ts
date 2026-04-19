@@ -12,6 +12,7 @@ const DB_PATH = path.join(DB_DIR, "aura_db.json");
 
 // Initial DB Structure
 const INITIAL_DB = {
+  platformAdmins: [], // Dashboard users
   users: [
     { uid: 'u1', email: 'admin@aura.db', provider: 'google.com', created: 'Apr 10, 2026', lastLogin: 'Apr 18, 2026' },
   ],
@@ -59,10 +60,12 @@ async function getDB() {
   cachedDB = JSON.parse(data);
   
   // Migrate existing DB if keys are missing
-  if (!cachedDB.stats) cachedDB.stats = INITIAL_DB.stats;
-  if (!cachedDB.rules) cachedDB.rules = INITIAL_DB.rules;
-  if (!cachedDB.functions) cachedDB.functions = INITIAL_DB.functions;
-  if (!cachedDB.apiKeys) cachedDB.apiKeys = INITIAL_DB.apiKeys;
+  if (!cachedDB.stats) typeof cachedDB.stats === 'undefined' && (cachedDB.stats = INITIAL_DB.stats);
+  if (!cachedDB.rules) typeof cachedDB.rules === 'undefined' && (cachedDB.rules = INITIAL_DB.rules);
+  if (!cachedDB.functions) typeof cachedDB.functions === 'undefined' && (cachedDB.functions = INITIAL_DB.functions);
+  if (!cachedDB.apiKeys) typeof cachedDB.apiKeys === 'undefined' && (cachedDB.apiKeys = INITIAL_DB.apiKeys);
+  if (!cachedDB.platformAdmins) cachedDB.platformAdmins = [];
+  if (!cachedDB.users) cachedDB.users = INITIAL_DB.users;
   
   return cachedDB;
 }
@@ -136,23 +139,282 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Platform Dashboard Auth (Real Backend)
+  app.post("/api/dashboard/register", async (req, res) => {
+    try {
+      const db = await getDB();
+      const { email, password } = req.body;
+      
+      if (!email || !password) return res.status(400).json({ error: "Missing fields" });
+      
+      db.platformAdmins = db.platformAdmins || [];
+      if (db.platformAdmins.find((a: any) => a.email === email)) {
+        return res.status(400).json({ error: "Admin already exists" });
+      }
+
+      const newAdmin = {
+        email,
+        password, 
+        name: email.split('@')[0],
+        tier: 'Pro Tier',
+        initials: (email.substring(0, 2) || "AD").toUpperCase()
+      };
+
+      db.platformAdmins.push(newAdmin);
+      await saveDB(db);
+      res.json(newAdmin);
+    } catch (err) {
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/dashboard/login", async (req, res) => {
+    try {
+      const db = await getDB();
+      const { email, password } = req.body;
+      
+      db.platformAdmins = db.platformAdmins || [];
+      const admin = db.platformAdmins.find((a: any) => a.email === email && a.password === password);
+      
+      if (!admin) {
+        // Fallback for first run or dev mode
+        if (email === 'admin@aura.db' && password === 'admin123') {
+          const defaultAdmin = { email: 'admin@aura.db', name: 'Admin', tier: 'Pro Tier', initials: 'AD' };
+          return res.json(defaultAdmin);
+        }
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      res.json(admin);
+    } catch (err) {
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Google OAuth Routes
+  app.get("/api/auth/google/url", (req, res) => {
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+    const options = {
+      redirect_uri: `${baseUrl}/api/auth/google/callback`,
+      client_id: process.env.GOOGLE_CLIENT_ID || "",
+      access_type: "offline",
+      response_type: "code",
+      prompt: "consent",
+      scope: [
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/userinfo.email",
+      ].join(" "),
+    };
+
+    const qs = new URLSearchParams(options);
+    res.json({ url: `${rootUrl}?${qs.toString()}` });
+  });
+
+  app.get(["/api/auth/google/callback", "/api/auth/google/callback/"], async (req, res) => {
+    const code = req.query.code as string;
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    
+    if (!code) {
+      return res.send(`<html><body><script>window.close()</script></body></html>`);
+    }
+
+    try {
+      // 1. Exchange code for tokens
+      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: process.env.GOOGLE_CLIENT_ID || "",
+          client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
+          redirect_uri: `${baseUrl}/api/auth/google/callback`,
+          grant_type: "authorization_code",
+        }),
+      });
+
+      const tokens = await tokenResponse.json();
+      if (!tokens.access_token) throw new Error("No access token");
+
+      // 2. Get user info
+      const userResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+
+      const googleUser = await userResponse.json();
+      
+      // 3. Sync with platformAdmins
+      const db = await getDB();
+      db.platformAdmins = db.platformAdmins || [];
+      
+      let admin = db.platformAdmins.find((a: any) => a.email === googleUser.email);
+      
+      if (!admin) {
+        admin = {
+          email: googleUser.email,
+          name: googleUser.name,
+          tier: 'Pro Tier',
+          initials: (googleUser.given_name?.[0] || googleUser.email[0]).toUpperCase() + 
+                    (googleUser.family_name?.[0] || "").toUpperCase(),
+          provider: 'google'
+        };
+        db.platformAdmins.push(admin);
+        await saveDB(db);
+      }
+
+      // 4. Send success message and data
+      res.send(`
+        <html>
+          <body style="background: #060608; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border: 3px solid #2563eb; border-top-color: transparent; border-radius: 50%; animate: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ 
+                    type: 'GOOGLE_AUTH_SUCCESS', 
+                    user: ${JSON.stringify(admin)} 
+                  }, '*');
+                  setTimeout(() => window.close(), 1000);
+                } else {
+                  window.location.href = '/';
+                }
+              </script>
+              <h2 style="margin: 0;">Authentication Successful</h2>
+              <p style="color: #71717a; margin-top: 10px;">Synchronizing with AuraDB Vault...</p>
+            </div>
+            <style>
+              @keyframes spin { to { transform: rotate(360deg); } }
+            </style>
+          </body>
+        </html>
+      `);
+    } catch (err) {
+      console.error("Google OAuth Error:", err);
+      res.status(500).send("Authentication failed");
+    }
+  });
+
+  // GitHub OAuth Routes
+  app.get("/api/auth/github/url", (req, res) => {
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const rootUrl = "https://github.com/login/oauth/authorize";
+    const options = {
+      client_id: process.env.GITHUB_CLIENT_ID || "",
+      redirect_uri: `${baseUrl}/api/auth/github/callback`,
+      scope: "user:email read:user",
+      state: Math.random().toString(36).substring(7)
+    };
+
+    const qs = new URLSearchParams(options);
+    res.json({ url: `${rootUrl}?${qs.toString()}` });
+  });
+
+  app.get(["/api/auth/github/callback", "/api/auth/github/callback/"], async (req, res) => {
+    const code = req.query.code as string;
+    
+    if (!code) {
+      return res.send(`<html><body><script>window.close()</script></body></html>`);
+    }
+
+    try {
+      // 1. Exchange code for access token
+      const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          client_id: process.env.GITHUB_CLIENT_ID || "",
+          client_secret: process.env.GITHUB_CLIENT_SECRET || "",
+          code,
+        }),
+      });
+
+      const tokens = await tokenResponse.json();
+      if (!tokens.access_token) throw new Error("No access token from GitHub");
+
+      // 2. Get user info
+      const userResponse = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+
+      const githubUser = await userResponse.json();
+
+      // 3. Get user email (might be private)
+      const emailResponse = await fetch("https://api.github.com/user/emails", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      const emails = await emailResponse.json();
+      const primaryEmail = emails.find((e: any) => e.primary)?.email || emails[0]?.email || `${githubUser.login}@github.com`;
+      
+      // 4. Sync with platformAdmins
+      const db = await getDB();
+      db.platformAdmins = db.platformAdmins || [];
+      
+      let admin = db.platformAdmins.find((a: any) => a.email === primaryEmail);
+      
+      if (!admin) {
+        admin = {
+          email: primaryEmail,
+          name: githubUser.name || githubUser.login,
+          tier: 'Pro Tier',
+          initials: (githubUser.name?.[0] || githubUser.login[0]).toUpperCase(),
+          provider: 'github'
+        };
+        db.platformAdmins.push(admin);
+        await saveDB(db);
+      }
+
+      // 5. Send success message
+      res.send(`
+        <html>
+          <body style="background: #060608; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border: 3px solid #2563eb; border-top-color: transparent; border-radius: 50%; animate: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ 
+                    type: 'GITHUB_AUTH_SUCCESS', 
+                    user: ${JSON.stringify(admin)} 
+                  }, '*');
+                  setTimeout(() => window.close(), 1000);
+                } else {
+                  window.location.href = '/';
+                }
+              </script>
+              <h2 style="margin: 0;">GitHub Authenticated</h2>
+              <p style="color: #71717a; margin-top: 10px;">Resyncing AuraDB Admin Session...</p>
+            </div>
+            <style>
+              @keyframes spin { to { transform: rotate(360deg); } }
+            </style>
+          </body>
+        </html>
+      `);
+    } catch (err) {
+      console.error("GitHub OAuth Error:", err);
+      res.status(500).send("GitHub Authentication failed");
+    }
+  });
+
+  // CORS Middleware
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-aura-key, x-pocketbase-token");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // URL Prefix Handling (CRITICAL: Must be at the very top)
   app.use((req, res, next) => {
     const originalUrl = req.url;
     if (req.url.startsWith('/api/aura')) {
       req.url = req.url.replace('/api/aura', '/api');
       console.log(`[ROUTING] Rewrote ${originalUrl} -> ${req.url}`);
-    }
-    next();
-  });
-
-  // CORS Middleware
-  app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-aura-key");
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
     }
     next();
   });
@@ -170,7 +432,8 @@ async function startServer() {
     const path = req.url.toLowerCase();
     
     // Allow internal Dashboard APIs and Registration/Auth bypass
-    if (path.startsWith('/api/db') || 
+    if (path.startsWith('/api/dashboard') || 
+        path.startsWith('/api/db') || 
         path.startsWith('/api/auth') || 
         path.startsWith('/api/analytics') || 
         path.startsWith('/api/apikeys') ||
@@ -214,36 +477,55 @@ async function startServer() {
     const db = await getDB();
     const { identity, password } = req.body;
     
-    console.log(`[AUTH] Login attempt: ${identity}`);
+    console.log(`[AUTH] Login attempt for identity: ${identity}`);
     
     // Find collection
     const usersCollection = db.collections.find((c: any) => c.id === 'users');
     if (!usersCollection) {
-      return res.status(404).json({ error: "No users registered yet." });
+      console.error("[AUTH] Users collection not found in DB");
+      return res.status(404).json({ error: "Authentication system not initialized." });
     }
 
-    // Find the specific user
-    const userDoc = usersCollection.docs.find((d: any) => 
-      d.data.email === identity || d.data.username === identity || d.data.identity === identity
-    );
+    // Find the specific user - more robust search
+    const userDoc = usersCollection.docs.find((d: any) => {
+      const data = d.data;
+      return (
+        data.email === identity || 
+        data.username === identity || 
+        data.identity === identity ||
+        (data.email && data.email.toLowerCase() === identity.toLowerCase())
+      );
+    });
 
     if (!userDoc) {
-      return res.status(400).json({ error: "User not found." });
+      console.warn(`[AUTH] User not found: ${identity}`);
+      return res.status(400).json({ error: "Invalid identity or password." });
     }
 
     // Check password (simple check for now)
     if (userDoc.data.password && userDoc.data.password !== password) {
-      return res.status(400).json({ error: "Invalid password." });
+      console.warn(`[AUTH] Invalid password for: ${identity}`);
+      return res.status(400).json({ error: "Invalid identity or password." });
     }
 
+    // Update last login in main auth list
+    const authUserIndex = db.users?.findIndex((u: any) => u.uid === userDoc.id);
+    if (authUserIndex > -1) {
+      db.users[authUserIndex].lastLogin = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      await saveDB(db);
+      broadcastSync('auth_changed', db.users);
+    }
+
+    console.log(`[AUTH] Login successful for: ${identity}`);
+
     res.json({
-      token: "aura_token_" + Math.random().toString(36).substr(2),
+      token: "aura_token_" + Math.random().toString(36).substr(2, 12),
       record: {
         id: userDoc.id,
         collectionId: "users",
         collectionName: "users",
         email: userDoc.data.email,
-        username: userDoc.data.username || userDoc.data.identity,
+        username: userDoc.data.username || userDoc.data.identity || userDoc.data.email.split('@')[0],
         verified: true,
         ...userDoc.data
       }
@@ -277,16 +559,21 @@ async function startServer() {
 
     // Sync with main Auth list if it's a new user
     if (collectionName === 'users') {
-      const authUser = {
-        uid: newRecord.id,
-        email: recordData.email || recordData.identity || 'user@aura.db',
-        provider: 'aura-identity',
-        created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        lastLogin: 'Never'
-      };
       db.users = db.users || [];
-      db.users.unshift(authUser);
-      broadcastSync('auth_changed', db.users);
+      const userEmail = recordData.email || recordData.identity;
+      const existingUser = db.users.find((u: any) => u.email === userEmail);
+      
+      if (!existingUser) {
+        const authUser = {
+          uid: newRecord.id,
+          email: userEmail || 'user@aura.db',
+          provider: 'aura-identity',
+          created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          lastLogin: 'Never'
+        };
+        db.users.unshift(authUser);
+        broadcastSync('auth_changed', db.users);
+      }
     }
 
     await saveDB(db);
