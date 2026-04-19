@@ -326,6 +326,31 @@ async function startServer() {
     });
   });
 
+  // User Auth Emulation (for Encyclopedia app)
+  app.post("/api/collections/users/auth-with-password", async (req, res) => {
+    const db = await getDB();
+    const { identity, password } = req.body;
+    console.log(`[COMPAT] User Login attempt: ${identity}`);
+    
+    // We auto-validate any user for now to unlock the app
+    res.json({
+      token: "aura_user_token_mock",
+      record: {
+        id: "u_mock_1",
+        collectionId: "users",
+        collectionName: "users",
+        email: identity || "user@aura.db",
+        username: identity?.split('@')[0] || "AuraUser",
+        verified: true
+      }
+    });
+  });
+
+  // Handle OAuth2 placeholders if needed
+  app.get("/api/collections/users/auth-methods", (req, res) => {
+    res.json({ authProviders: [] });
+  });
+
   app.get("/api/collections/:collectionName/records", async (req, res) => {
     const db = await getDB();
     const { collectionName } = req.params;
