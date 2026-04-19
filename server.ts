@@ -193,7 +193,9 @@ async function startServer() {
 
   // Google OAuth Routes
   app.get("/api/auth/google/url", (req, res) => {
-    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['host'];
+    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
     const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
     const options = {
       redirect_uri: `${baseUrl}/api/auth/google/callback`,
@@ -213,7 +215,9 @@ async function startServer() {
 
   app.get(["/api/auth/google/callback", "/api/auth/google/callback/"], async (req, res) => {
     const code = req.query.code as string;
-    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['host'];
+    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
     
     if (!code) {
       return res.send(`<html><body><script>window.close()</script></body></html>`);
@@ -296,7 +300,9 @@ async function startServer() {
 
   // GitHub OAuth Routes
   app.get("/api/auth/github/url", (req, res) => {
-    const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['host'];
+    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
     const rootUrl = "https://github.com/login/oauth/authorize";
     const options = {
       client_id: process.env.GITHUB_CLIENT_ID || "",
