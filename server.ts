@@ -134,6 +134,17 @@ async function startServer() {
   }, 5000);
 
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // URL Prefix Handling (CRITICAL: Must be at the very top)
+  app.use((req, res, next) => {
+    const originalUrl = req.url;
+    if (req.url.startsWith('/api/aura')) {
+      req.url = req.url.replace('/api/aura', '/api');
+      console.log(`[ROUTING] Rewrote ${originalUrl} -> ${req.url}`);
+    }
+    next();
+  });
 
   // CORS Middleware
   app.use((req, res, next) => {
@@ -158,8 +169,13 @@ async function startServer() {
     // Normalize path for internal check
     const path = req.url.toLowerCase();
     
-    // Allow internal Dashboard APIs
-    if (path.startsWith('/api/db') || path.startsWith('/api/auth') || path.startsWith('/api/analytics') || path.startsWith('/api/apikeys')) {
+    // Allow internal Dashboard APIs and Registration/Auth bypass
+    if (path.startsWith('/api/db') || 
+        path.startsWith('/api/auth') || 
+        path.startsWith('/api/analytics') || 
+        path.startsWith('/api/apikeys') ||
+        path.includes('/auth-with-password') ||
+        (path.includes('/collections/users/records') && req.method === 'POST')) {
       return next();
     }
 
@@ -182,12 +198,112 @@ async function startServer() {
 
   app.use(validateKey);
 
-  // Prefix handling for /api/aura
-  app.use((req, res, next) => {
-    if (req.url.startsWith('/api/aura')) {
-      req.url = req.url.replace('/api/aura', '/api');
+  // --- PocketBase Compatibility Layer (High Priority) ---
+  
+  // Admin Auth
+  app.post("/api/admins/auth-with-password", async (req, res) => {
+    console.log("[COMPAT] Admin Auth attempt received");
+    res.json({
+      token: "aura_super_token_mock",
+      admin: { id: "admin_1", email: "admin@aura.db" }
+    });
+  });
+
+  // User Auth
+  app.post("/api/collections/users/auth-with-password", async (req, res) => {
+    const { identity } = req.body;
+    console.log(`[COMPAT] User Login attempt: ${identity}`);
+    res.json({
+      token: "aura_user_token_mock",
+      record: {
+        id: "u_mock_1",
+        collectionId: "users",
+        collectionName: "users",
+        email: identity || "user@aura.db",
+        username: identity?.split('@')[0] || "AuraUser",
+        verified: true
+      }
+    });
+  });
+
+  // Registration & Record Creation
+  app.post("/api/collections/:collectionName/records", async (req, res) => {
+    const db = await getDB();
+    const { collectionName } = req.params;
+    const recordData = req.body;
+    
+    console.log(`[COMPAT] Creating record in: ${collectionName}`);
+
+    const newRecord = {
+      id: Math.random().toString(36).substr(2, 9),
+      collectionId: collectionName,
+      collectionName: collectionName,
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      ...recordData
+    };
+
+    let collection = db.collections.find((c: any) => c.id === collectionName);
+    if (!collection) {
+      collection = { id: collectionName, docs: [] };
+      db.collections.push(collection);
     }
-    next();
+
+    collection.docs.push({ id: newRecord.id, data: recordData });
+    await saveDB(db);
+    broadcastSync('db_changed', db.collections);
+
+    res.json(newRecord);
+  });
+
+  app.get("/api/collections/:collectionName/records", async (req, res) => {
+    const db = await getDB();
+    const { collectionName } = req.params;
+    const collection = db.collections.find((c: any) => c.id === collectionName);
+
+    console.log(`[COMPAT] Requesting records for: ${collectionName}`);
+
+    if (!collection) {
+      return res.json({
+        page: 1,
+        perPage: 30,
+        totalItems: 0,
+        totalPages: 0,
+        items: []
+      });
+    }
+
+    // Format like PocketBase
+    res.json({
+      page: 1,
+      perPage: 500,
+      totalItems: collection.docs.length,
+      totalPages: 1,
+      items: collection.docs.map((doc: any) => ({
+        id: doc.id,
+        collectionId: collectionName,
+        collectionName: collectionName,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        ...doc.data
+      }))
+    });
+  });
+
+  app.get("/api/collections/:collectionName/records/:id", async (req, res) => {
+    const db = await getDB();
+    const { collectionName, id } = req.params;
+    const collection = db.collections.find((c: any) => c.id === collectionName);
+    const doc = collection?.docs.find((d: any) => d.id === id);
+
+    if (!doc) return res.status(404).json({ error: "Record not found" });
+
+    res.json({
+      id: doc.id,
+      collectionId: collectionName,
+      collectionName: collectionName,
+      ...doc.data
+    });
   });
 
   // --- AuraDB Engine API ---
@@ -308,97 +424,6 @@ async function startServer() {
     db.apiKeys = (db.apiKeys || []).filter((k: any) => k.id !== req.params.id);
     await saveDB(db);
     res.json({ success: true });
-  });
-
-  // PocketBase Compatibility Layer (for Encyclopedia app)
-  
-  // Admin Auth Emulation
-  app.post("/api/admins/auth-with-password", async (req, res) => {
-    const db = await getDB();
-    console.log("[COMPAT] Admin Auth attempt received");
-    // We trust our proxy's initial handshake or just return a valid PB-like token
-    res.json({
-      token: "aura_super_token_mock",
-      admin: {
-        id: "admin_1",
-        email: "admin@aura.db"
-      }
-    });
-  });
-
-  // User Auth Emulation (for Encyclopedia app)
-  app.post("/api/collections/users/auth-with-password", async (req, res) => {
-    const db = await getDB();
-    const { identity, password } = req.body;
-    console.log(`[COMPAT] User Login attempt: ${identity}`);
-    
-    // We auto-validate any user for now to unlock the app
-    res.json({
-      token: "aura_user_token_mock",
-      record: {
-        id: "u_mock_1",
-        collectionId: "users",
-        collectionName: "users",
-        email: identity || "user@aura.db",
-        username: identity?.split('@')[0] || "AuraUser",
-        verified: true
-      }
-    });
-  });
-
-  // Handle OAuth2 placeholders if needed
-  app.get("/api/collections/users/auth-methods", (req, res) => {
-    res.json({ authProviders: [] });
-  });
-
-  app.get("/api/collections/:collectionName/records", async (req, res) => {
-    const db = await getDB();
-    const { collectionName } = req.params;
-    const collection = db.collections.find((c: any) => c.id === collectionName);
-
-    console.log(`[COMPAT] Requesting records for: ${collectionName}`);
-
-    if (!collection) {
-      return res.json({
-        page: 1,
-        perPage: 30,
-        totalItems: 0,
-        totalPages: 0,
-        items: []
-      });
-    }
-
-    // Format like PocketBase
-    res.json({
-      page: 1,
-      perPage: 500,
-      totalItems: collection.docs.length,
-      totalPages: 1,
-      items: collection.docs.map((doc: any) => ({
-        id: doc.id,
-        collectionId: collectionName,
-        collectionName: collectionName,
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
-        ...doc.data
-      }))
-    });
-  });
-
-  app.get("/api/collections/:collectionName/records/:id", async (req, res) => {
-    const db = await getDB();
-    const { collectionName, id } = req.params;
-    const collection = db.collections.find((c: any) => c.id === collectionName);
-    const doc = collection?.docs.find((d: any) => d.id === id);
-
-    if (!doc) return res.status(404).json({ error: "Record not found" });
-
-    res.json({
-      id: doc.id,
-      collectionId: collectionName,
-      collectionName: collectionName,
-      ...doc.data
-    });
   });
 
   // Analytics Stats
