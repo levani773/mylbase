@@ -154,23 +154,41 @@ async function startServer() {
   // API Key Validation Middleware
   const validateKey = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const db = await getDB();
-    const providedKey = req.headers['x-aura-key'] || req.query['x-aura-key'] || req.headers['authorization']?.toString().replace('Bearer ', '');
     
-    // For browser dashboard or local dev, allow
-    if (req.url.startsWith('/api/db') || req.url.startsWith('/api/auth') || req.url.startsWith('/api/analytics')) {
+    // Normalize path for internal check
+    const path = req.url.toLowerCase();
+    
+    // Allow internal Dashboard APIs
+    if (path.startsWith('/api/db') || path.startsWith('/api/auth') || path.startsWith('/api/analytics') || path.startsWith('/api/apikeys')) {
       return next();
     }
 
+    // Try to find the token in various places
+    const providedKey = req.headers['x-aura-key'] || 
+                       req.query['x-aura-key'] || 
+                       req.headers['authorization']?.toString().replace('Bearer ', '');
+
+    console.log(`[AUTH-DEBUG] Path: ${req.url}`);
+    console.log(`[AUTH-DEBUG] Headers: ${JSON.stringify(req.headers)}`);
+    
     const keyEntry = db.apiKeys?.find((k: any) => k.key === providedKey);
+
     if (!keyEntry && process.env.NODE_ENV === "production") {
-      console.warn(`[AUTH] Unauthorized access attempt to ${req.url} from ${req.ip}`);
-      // return res.status(403).json({ error: "Invalid or missing AuraDB API Key" });
-      // Temporary: Logging ONLY during fix phase
+      console.warn(`[AUTH] Unauthorized! Sent: ${providedKey}`);
+      // If no key found, we still allow but log it for now to avoid blocking while debugging
     }
     next();
   };
 
   app.use(validateKey);
+
+  // Prefix handling for /api/aura
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/api/aura')) {
+      req.url = req.url.replace('/api/aura', '/api');
+    }
+    next();
+  });
 
   // --- AuraDB Engine API ---
 
@@ -293,6 +311,21 @@ async function startServer() {
   });
 
   // PocketBase Compatibility Layer (for Encyclopedia app)
+  
+  // Admin Auth Emulation
+  app.post("/api/admins/auth-with-password", async (req, res) => {
+    const db = await getDB();
+    console.log("[COMPAT] Admin Auth attempt received");
+    // We trust our proxy's initial handshake or just return a valid PB-like token
+    res.json({
+      token: "aura_super_token_mock",
+      admin: {
+        id: "admin_1",
+        email: "admin@aura.db"
+      }
+    });
+  });
+
   app.get("/api/collections/:collectionName/records", async (req, res) => {
     const db = await getDB();
     const { collectionName } = req.params;
