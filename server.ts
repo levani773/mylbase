@@ -196,10 +196,17 @@ async function startServer() {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['host'];
     const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error("[OAUTH] Error: GOOGLE_CLIENT_ID is not set in environment variables");
+      return res.status(500).json({ error: "Google Client ID is missing. Please set it in Secrets/Environment variables." });
+    }
+
     const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
     const options = {
       redirect_uri: `${baseUrl}/api/auth/google/callback`,
-      client_id: process.env.GOOGLE_CLIENT_ID || "",
+      client_id: clientId,
       access_type: "offline",
       response_type: "code",
       prompt: "consent",
@@ -210,7 +217,9 @@ async function startServer() {
     };
 
     const qs = new URLSearchParams(options);
-    res.json({ url: `${rootUrl}?${qs.toString()}` });
+    const url = `${rootUrl}?${qs.toString()}`;
+    console.log(`[OAUTH] Generated Google URL with redirect: ${options.redirect_uri}`);
+    res.json({ url });
   });
 
   app.get(["/api/auth/google/callback", "/api/auth/google/callback/"], async (req, res) => {
@@ -303,16 +312,25 @@ async function startServer() {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['host'];
     const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) {
+      console.error("[OAUTH] Error: GITHUB_CLIENT_ID is not set in environment variables");
+      return res.status(500).json({ error: "GitHub Client ID is missing." });
+    }
+
     const rootUrl = "https://github.com/login/oauth/authorize";
     const options = {
-      client_id: process.env.GITHUB_CLIENT_ID || "",
+      client_id: clientId,
       redirect_uri: `${baseUrl}/api/auth/github/callback`,
       scope: "user:email read:user",
       state: Math.random().toString(36).substring(7)
     };
 
     const qs = new URLSearchParams(options);
-    res.json({ url: `${rootUrl}?${qs.toString()}` });
+    const url = `${rootUrl}?${qs.toString()}`;
+    console.log(`[OAUTH] Generated GitHub URL with redirect: ${options.redirect_uri}`);
+    res.json({ url });
   });
 
   app.get(["/api/auth/github/callback", "/api/auth/github/callback/"], async (req, res) => {
