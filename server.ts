@@ -274,6 +274,21 @@ async function startServer() {
     }
 
     collection.docs.push({ id: newRecord.id, data: recordData });
+
+    // Sync with main Auth list if it's a new user
+    if (collectionName === 'users') {
+      const authUser = {
+        uid: newRecord.id,
+        email: recordData.email || recordData.identity || 'user@aura.db',
+        provider: 'aura-identity',
+        created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        lastLogin: 'Never'
+      };
+      db.users = db.users || [];
+      db.users.unshift(authUser);
+      broadcastSync('auth_changed', db.users);
+    }
+
     await saveDB(db);
     broadcastSync('db_changed', db.collections);
 
