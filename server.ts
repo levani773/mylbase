@@ -209,19 +209,43 @@ async function startServer() {
     });
   });
 
-  // User Auth
+  // User Auth - Real Validation (for Encyclopedia app)
   app.post("/api/collections/users/auth-with-password", async (req, res) => {
-    const { identity } = req.body;
-    console.log(`[COMPAT] User Login attempt: ${identity}`);
+    const db = await getDB();
+    const { identity, password } = req.body;
+    
+    console.log(`[AUTH] Login attempt: ${identity}`);
+    
+    // Find collection
+    const usersCollection = db.collections.find((c: any) => c.id === 'users');
+    if (!usersCollection) {
+      return res.status(404).json({ error: "No users registered yet." });
+    }
+
+    // Find the specific user
+    const userDoc = usersCollection.docs.find((d: any) => 
+      d.data.email === identity || d.data.username === identity || d.data.identity === identity
+    );
+
+    if (!userDoc) {
+      return res.status(400).json({ error: "User not found." });
+    }
+
+    // Check password (simple check for now)
+    if (userDoc.data.password && userDoc.data.password !== password) {
+      return res.status(400).json({ error: "Invalid password." });
+    }
+
     res.json({
-      token: "aura_user_token_mock",
+      token: "aura_token_" + Math.random().toString(36).substr(2),
       record: {
-        id: "u_mock_1",
+        id: userDoc.id,
         collectionId: "users",
         collectionName: "users",
-        email: identity || "user@aura.db",
-        username: identity?.split('@')[0] || "AuraUser",
-        verified: true
+        email: userDoc.data.email,
+        username: userDoc.data.username || userDoc.data.identity,
+        verified: true,
+        ...userDoc.data
       }
     });
   });
