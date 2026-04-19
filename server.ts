@@ -151,6 +151,27 @@ async function startServer() {
     io.emit('aura_sync', { type, data });
   };
 
+  // API Key Validation Middleware
+  const validateKey = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const db = await getDB();
+    const providedKey = req.headers['x-aura-key'] || req.query['x-aura-key'] || req.headers['authorization']?.toString().replace('Bearer ', '');
+    
+    // For browser dashboard or local dev, allow
+    if (req.url.startsWith('/api/db') || req.url.startsWith('/api/auth') || req.url.startsWith('/api/analytics')) {
+      return next();
+    }
+
+    const keyEntry = db.apiKeys?.find((k: any) => k.key === providedKey);
+    if (!keyEntry && process.env.NODE_ENV === "production") {
+      console.warn(`[AUTH] Unauthorized access attempt to ${req.url} from ${req.ip}`);
+      // return res.status(403).json({ error: "Invalid or missing AuraDB API Key" });
+      // Temporary: Logging ONLY during fix phase
+    }
+    next();
+  };
+
+  app.use(validateKey);
+
   // --- AuraDB Engine API ---
 
   // Auth
@@ -269,6 +290,57 @@ async function startServer() {
     db.apiKeys = (db.apiKeys || []).filter((k: any) => k.id !== req.params.id);
     await saveDB(db);
     res.json({ success: true });
+  });
+
+  // PocketBase Compatibility Layer (for Encyclopedia app)
+  app.get("/api/collections/:collectionName/records", async (req, res) => {
+    const db = await getDB();
+    const { collectionName } = req.params;
+    const collection = db.collections.find((c: any) => c.id === collectionName);
+
+    console.log(`[COMPAT] Requesting records for: ${collectionName}`);
+
+    if (!collection) {
+      return res.json({
+        page: 1,
+        perPage: 30,
+        totalItems: 0,
+        totalPages: 0,
+        items: []
+      });
+    }
+
+    // Format like PocketBase
+    res.json({
+      page: 1,
+      perPage: 500,
+      totalItems: collection.docs.length,
+      totalPages: 1,
+      items: collection.docs.map((doc: any) => ({
+        id: doc.id,
+        collectionId: collectionName,
+        collectionName: collectionName,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+        ...doc.data
+      }))
+    });
+  });
+
+  app.get("/api/collections/:collectionName/records/:id", async (req, res) => {
+    const db = await getDB();
+    const { collectionName, id } = req.params;
+    const collection = db.collections.find((c: any) => c.id === collectionName);
+    const doc = collection?.docs.find((d: any) => d.id === id);
+
+    if (!doc) return res.status(404).json({ error: "Record not found" });
+
+    res.json({
+      id: doc.id,
+      collectionId: collectionName,
+      collectionName: collectionName,
+      ...doc.data
+    });
   });
 
   // Analytics Stats
