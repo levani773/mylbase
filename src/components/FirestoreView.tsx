@@ -182,7 +182,9 @@ export const FirestoreView: React.FC = () => {
               >
                 <FileJson className="w-3.5 h-3.5" />
                 <span className="flex-1 text-left truncate">
-                  {selectedColId === 'users' && doc.data?.name ? doc.data.name : doc.id}
+                  {(doc.data?.name || doc.data?.title) && typeof (doc.data?.name || doc.data?.title) === 'string' 
+                    ? (doc.data.name || doc.data.title) 
+                    : doc.id}
                 </span>
                 <ChevronRight className="w-3 h-3 opacity-30" />
               </button>
