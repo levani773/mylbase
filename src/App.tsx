@@ -15,6 +15,7 @@ import { HostingView } from './components/HostingView';
 import { RulesView } from './components/RulesView';
 import { SDKView } from './components/SDKView';
 import { ApiKeysView } from './components/ApiKeysView';
+import { SettingsView } from './components/SettingsView';
 import { Service } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -75,6 +76,8 @@ export default function App() {
         return <SDKView />;
       case 'apikeys':
         return <ApiKeysView />;
+      case 'settings':
+        return <SettingsView />;
       default:
         return <AuthView />;
     }
@@ -88,7 +91,7 @@ export default function App() {
       />
       
       <main className="flex-1 flex flex-col min-w-0">
-        <Topbar />
+        <Topbar onNavigate={setActiveService} />
         
         <div className="flex-1 p-8 overflow-y-auto">
           <AnimatePresence mode="wait">

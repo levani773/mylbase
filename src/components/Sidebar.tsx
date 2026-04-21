@@ -63,7 +63,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeService, onServiceChange
       </nav>
 
       <div className="p-4 border-t border-[#1F1F23]">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 transition-all">
+        <button 
+          onClick={() => onServiceChange('settings')}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-200",
+            activeService === 'settings'
+              ? "bg-blue-600/10 text-blue-400 font-medium border border-blue-600/20 shadow-sm shadow-blue-900/10"
+              : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+          )}
+        >
           <Settings className="w-4 h-4" />
           <span>Project Settings</span>
         </button>

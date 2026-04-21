@@ -2,7 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, HelpCircle, LogOut, Settings, User, Shield, CreditCard, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export const Topbar: React.FC = () => {
+import { Service } from '../types';
+
+interface TopbarProps {
+  onNavigate: (service: Service) => void;
+}
+
+export const Topbar: React.FC<TopbarProps> = ({ onNavigate }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
@@ -131,23 +137,36 @@ export const Topbar: React.FC = () => {
                       <div className="text-[11px] text-zinc-500">levani773@gmail.com</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg group cursor-pointer hover:bg-blue-500/20 transition-all">
+                  <button 
+                    onClick={() => {
+                      onNavigate('settings');
+                      setIsProfileOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg group cursor-pointer hover:bg-blue-500/20 transition-all"
+                  >
                     <div className="flex items-center gap-2">
                        <CreditCard className="w-3.5 h-3.5 text-blue-400" />
                        <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wider">Upgrade to Enterprise</span>
                     </div>
                     <ChevronRight className="w-3 h-3 text-blue-400 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
+                  </button>
                 </div>
 
                 <div className="p-2">
                   {[
-                    { label: 'Profile Settings', icon: User },
-                    { label: 'Organization Settings', icon: Settings },
-                    { label: 'Subscription & Billing', icon: CreditCard },
-                    { label: 'Security & Access', icon: Shield },
+                    { label: 'Profile Settings', icon: User, action: () => onNavigate('settings') },
+                    { label: 'Organization Settings', icon: Settings, action: () => onNavigate('settings') },
+                    { label: 'Subscription & Billing', icon: CreditCard, action: () => onNavigate('settings') },
+                    { label: 'Security & Access', icon: Shield, action: () => onNavigate('settings') },
                   ].map((item, i) => (
-                    <button key={i} className="w-full flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-sm group">
+                    <button 
+                      key={i} 
+                      onClick={() => {
+                        item.action();
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-sm group"
+                    >
                       <item.icon className="w-4 h-4 group-hover:text-blue-400 transition-colors" />
                       <span>{item.label}</span>
                     </button>
@@ -155,7 +174,13 @@ export const Topbar: React.FC = () => {
                 </div>
 
                 <div className="p-2 border-t border-[#1F1F23]">
-                  <button className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all text-sm group">
+                  <button 
+                    onClick={() => {
+                      alert('Logging out of AuraDB...');
+                      setIsProfileOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all text-sm group"
+                  >
                     <LogOut className="w-4 h-4" />
                     <span>Log Out</span>
                   </button>
