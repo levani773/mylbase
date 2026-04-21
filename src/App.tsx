@@ -15,7 +15,6 @@ import { HostingView } from './components/HostingView';
 import { RulesView } from './components/RulesView';
 import { SDKView } from './components/SDKView';
 import { ApiKeysView } from './components/ApiKeysView';
-import { DashboardAuth } from './components/DashboardAuth';
 import { Service } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -23,10 +22,6 @@ export default function App() {
   const [activeService, setActiveService] = useState<Service>('auth');
   const [hasError, setHasError] = useState(false);
   const [errorInfo, setErrorInfo] = useState<string>('');
-  const [user, setUser] = useState<any>(() => {
-    const saved = localStorage.getItem('aura_admin_user');
-    return saved ? JSON.parse(saved) : null;
-  });
 
   React.useEffect(() => {
     // Flag that the app has successfully rendered to suppress environment noise in index.html
@@ -40,10 +35,6 @@ export default function App() {
     window.addEventListener('error', errorHandler);
     return () => window.removeEventListener('error', errorHandler);
   }, []);
-
-  if (!user) {
-    return <DashboardAuth onLogin={setUser} />;
-  }
 
   if (hasError) {
     return (
@@ -97,10 +88,7 @@ export default function App() {
       />
       
       <main className="flex-1 flex flex-col min-w-0">
-        <Topbar user={user} onLogout={() => {
-          localStorage.removeItem('aura_admin_user');
-          setUser(null);
-        }} />
+        <Topbar />
         
         <div className="flex-1 p-8 overflow-y-auto">
           <AnimatePresence mode="wait">
