@@ -35,6 +35,7 @@ export const DashboardAuth: React.FC<AuthProps> = ({ onLogin }) => {
         `width=${width},height=${height},left=${left},top=${top}`
       );
     } catch (err: any) {
+      console.error("[OAUTH_DEBUG] Initialization Error:", err);
       setError(err.message || 'Google Sign-In failed to initialize');
     }
   };
