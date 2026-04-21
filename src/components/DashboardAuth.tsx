@@ -17,9 +17,13 @@ export const DashboardAuth: React.FC<AuthProps> = ({ onLogin }) => {
   const handleGoogleLogin = async () => {
     try {
       const response = await fetch('/api/auth/google/url');
-      if (!response.ok) throw new Error('Failed to get auth URL');
-      const { url } = await response.json();
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get auth URL');
+      }
 
+      const { url } = data;
       const width = 500;
       const height = 600;
       const left = window.screen.width / 2 - width / 2;
@@ -31,7 +35,7 @@ export const DashboardAuth: React.FC<AuthProps> = ({ onLogin }) => {
         `width=${width},height=${height},left=${left},top=${top}`
       );
     } catch (err: any) {
-      setError('Google Sign-In failed to initialize');
+      setError(err.message || 'Google Sign-In failed to initialize');
     }
   };
 
