@@ -195,12 +195,13 @@ async function startServer() {
   app.get("/api/auth/google/url", (req, res) => {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['host'];
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    // Prefer dynamic detection to support AI Studio preview and custom domains (like Railway) simultaneously
+    const baseUrl = `${protocol}://${host}`;
     
     const clientId = process.env.GOOGLE_CLIENT_ID;
     if (!clientId) {
-      console.error("[OAUTH] Error: GOOGLE_CLIENT_ID is not set in environment variables");
-      return res.status(500).json({ error: "Google Client ID is missing. Please set it in Secrets/Environment variables." });
+      console.error("[OAUTH] CRITICAL: GOOGLE_CLIENT_ID is missing from environment");
+      return res.status(500).json({ error: "Google Client ID is missing. Initialize it in Secrets." });
     }
 
     const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -218,7 +219,7 @@ async function startServer() {
 
     const qs = new URLSearchParams(options);
     const url = `${rootUrl}?${qs.toString()}`;
-    console.log(`[OAUTH] Generated Google URL with redirect: ${options.redirect_uri}`);
+    console.log(`[OAUTH] Google Request -> Redirect URI: ${options.redirect_uri}`);
     res.json({ url });
   });
 
@@ -226,10 +227,10 @@ async function startServer() {
     const code = req.query.code as string;
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['host'];
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    const baseUrl = `${protocol}://${host}`;
     
     if (!code) {
-      return res.send(`<html><body><script>window.close()</script></body></html>`);
+      return res.send(`<html><body style="background:#060608"><script>window.close()</script></body></html>`);
     }
 
     try {
@@ -311,11 +312,11 @@ async function startServer() {
   app.get("/api/auth/github/url", (req, res) => {
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['host'];
-    const baseUrl = process.env.APP_URL || `${protocol}://${host}`;
+    const baseUrl = `${protocol}://${host}`;
     
     const clientId = process.env.GITHUB_CLIENT_ID;
     if (!clientId) {
-      console.error("[OAUTH] Error: GITHUB_CLIENT_ID is not set in environment variables");
+      console.error("[OAUTH] CRITICAL: GITHUB_CLIENT_ID is missing from environment");
       return res.status(500).json({ error: "GitHub Client ID is missing." });
     }
 
@@ -329,7 +330,7 @@ async function startServer() {
 
     const qs = new URLSearchParams(options);
     const url = `${rootUrl}?${qs.toString()}`;
-    console.log(`[OAUTH] Generated GitHub URL with redirect: ${options.redirect_uri}`);
+    console.log(`[OAUTH] GitHub Request -> Redirect URI: ${options.redirect_uri}`);
     res.json({ url });
   });
 
@@ -337,7 +338,7 @@ async function startServer() {
     const code = req.query.code as string;
     
     if (!code) {
-      return res.send(`<html><body><script>window.close()</script></body></html>`);
+      return res.send(`<html><body style="background:#060608"><script>window.close()</script></body></html>`);
     }
 
     try {
