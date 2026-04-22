@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, MoreVertical, Plus, Search, Loader2, Shield, Settings2, Globe, Github, chrome, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { Mail, MoreVertical, Plus, Search, Loader2, Shield, Settings2, Globe, Github, Chrome, ShieldAlert, CheckCircle2, XCircle, User as UserIcon } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { motion, AnimatePresence } from 'motion/react';
-import { User } from '../types';
+import { type User } from '../types';
 import { useToast } from './Toast';
 import { io } from 'socket.io-client';
 import { cn } from '../lib/utils';
@@ -248,7 +248,7 @@ export const AuthView: React.FC = () => {
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 group-hover:bg-blue-600/10 group-hover:text-blue-400 group-hover:border-blue-500/20 transition-all">
-                              <User className="w-5 h-5" />
+                              <UserIcon className="w-5 h-5" />
                             </div>
                             <div>
                                <div className="text-sm font-bold text-zinc-200">{user.email}</div>
