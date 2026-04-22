@@ -1,4 +1,4 @@
-export type Service = 'auth' | 'firestore' | 'storage' | 'hosting' | 'functions' | 'analytics' | 'rules' | 'sdk' | 'apikeys' | 'settings';
+export type Service = 'dashboard' | 'auth' | 'firestore' | 'storage' | 'hosting' | 'functions' | 'analytics' | 'rules' | 'sdk' | 'apikeys' | 'settings';
 
 export interface ApiKey {
   id: string;

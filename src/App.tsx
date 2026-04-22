@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
+import { DashboardView } from './components/DashboardView';
 import { AuthView } from './components/AuthView';
 import { FirestoreView } from './components/FirestoreView';
 import { StorageView } from './components/StorageView';
@@ -23,7 +24,7 @@ import { Service } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
-  const [activeService, setActiveService] = useState<Service>('auth');
+  const [activeService, setActiveService] = useState<Service>('dashboard');
   const [hasError, setHasError] = useState(false);
   const [errorInfo, setErrorInfo] = useState<string>('');
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
@@ -62,6 +63,8 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeService) {
+      case 'dashboard':
+        return <DashboardView onNavigate={setActiveService} />;
       case 'auth':
         return <AuthView />;
       case 'firestore':

@@ -10,7 +10,8 @@ import {
   ChevronRight,
   Zap,
   Package,
-  Key
+  Key,
+  LayoutDashboard
 } from 'lucide-react';
 import { Service } from '../types';
 import { cn } from '../lib/utils';
@@ -22,6 +23,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeService, onServiceChange }) => {
   const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'auth', label: 'Authentication', icon: Users },
     { id: 'firestore', label: 'Firestore', icon: Database },
     { id: 'rules', label: 'Security Rules', icon: Settings },
