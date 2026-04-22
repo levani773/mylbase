@@ -1,6 +1,6 @@
 {
   "name": "AuraDB Platform",
-  "description": "A comprehensive BaaS management dashboard inspired by Firebase, featuring database exploring, authentication, storage, and AI-powered insights.",
+  "description": "Next-gen infrastructure engine for AuraDB. Featuring intelligent mock data generation (Aura AI), real-time database explorer, advanced binary storage, and global analytics dashboard.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
