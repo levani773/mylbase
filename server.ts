@@ -398,6 +398,29 @@ async function startServer() {
     res.json(db.storage);
   });
 
+  app.post("/api/storage/upload", async (req, res) => {
+    const db = await getDB();
+    const { name, size, type } = req.body;
+    const newFile = {
+      name,
+      type: type || 'file',
+      size: size || '0 KB',
+      modified: 'Just now'
+    };
+    db.storage.unshift(newFile);
+    await saveDB(db);
+    broadcastSync('storage_changed', db.storage);
+    res.json(newFile);
+  });
+
+  app.delete("/api/storage/:name", async (req, res) => {
+    const db = await getDB();
+    db.storage = db.storage.filter((s: any) => s.name !== req.params.name);
+    await saveDB(db);
+    broadcastSync('storage_changed', db.storage);
+    res.json({ success: true });
+  });
+
   // API Keys
   app.get("/api/apikeys", async (req, res) => {
     const db = await getDB();

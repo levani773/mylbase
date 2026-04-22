@@ -16,7 +16,8 @@ import {
   Database,
   Layers,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { cn } from '../lib/utils';
@@ -24,6 +25,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FirestoreCollection } from '../types';
 import { useToast } from './Toast';
 import { io } from 'socket.io-client';
+import { GoogleGenAI } from "@google/genai";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 let socket: any;
 try {
@@ -46,6 +50,7 @@ export const FirestoreView: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [isGeneratingMock, setIsGeneratingMock] = useState(false);
   
   const { success, error, info } = useToast();
 
@@ -176,6 +181,57 @@ export const FirestoreView: React.FC = () => {
       }
     } catch (e) {
       error('Engine Sync Failed', e instanceof Error ? e.message : 'Invalid JSON');
+    }
+  };
+
+  const generateMockData = async () => {
+    if (!selectedColId) {
+      info('Context Required', 'Please select a collection first so Aura AI knows the schema target.');
+      return;
+    }
+
+    setIsGeneratingMock(true);
+    info('Aura AI', `Generating intelligent mock data for /${selectedColId}...`);
+
+    try {
+      const prompt = `Generate a realistic array of 5 JSON objects for a Firestore collection named "${selectedColId}". 
+      Each object should have unique data. Return ONLY the JSON array, no extra text.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }]
+      });
+
+      const text = response.text || "[]";
+      const cleanJson = text.replace(/```json|```/g, '').trim();
+      const mockItems = JSON.parse(cleanJson);
+
+      const newData = data.map(col => {
+        if (col.id === selectedColId) {
+          const newDocs = mockItems.map((item: any) => ({
+            id: `mock_${Math.random().toString(36).substr(2, 5)}`,
+            data: item
+          }));
+          return { ...col, docs: [...col.docs, ...newDocs] };
+        }
+        return col;
+      });
+
+      const res = await fetch('/api/db/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: newData })
+      });
+
+      if (res.ok) {
+        setData(newData);
+        success('AI Synthesis Complete', `Injected 5 synthetic records into /${selectedColId}`);
+      }
+    } catch (err) {
+      console.error(err);
+      error('AI Error', 'Simulation failed. Check API configuration.');
+    } finally {
+      setIsGeneratingMock(false);
     }
   };
 
@@ -348,6 +404,14 @@ export const FirestoreView: React.FC = () => {
                   <span className="opacity-50">path:</span> {selectedColId}/{selectedDocId}
                 </div>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={generateMockData}
+                    disabled={isGeneratingMock || !selectedColId}
+                    className="disabled:opacity-50 px-3 py-1.5 text-[10px] font-bold text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 transition-all uppercase tracking-widest rounded-lg flex items-center gap-2 border border-blue-500/20"
+                  >
+                    {isGeneratingMock ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    Aura AI Generate
+                  </button>
                   <button 
                     onClick={handleSave}
                     disabled={!selectedDocId}
