@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, MoreVertical, Plus, Search, Loader2 } from 'lucide-react';
+import { Mail, MoreVertical, Plus, Search, Loader2, Shield, Settings2, Globe, Github, chrome, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 import { PageHeader } from './PageHeader';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { User } from '../types';
+import { useToast } from './Toast';
 import { io } from 'socket.io-client';
+import { cn } from '../lib/utils';
+
+type AuthTab = 'users' | 'providers' | 'settings';
 
 let socket: any;
 try {
@@ -23,9 +27,12 @@ export const AuthView: React.FC = () => {
   const [search, setSearch] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [activeTab, setActiveTab] = useState<AuthTab>('users');
+  const { success, error: toastError, info } = useToast();
 
   useEffect(() => {
     fetchUsers();
+    // ... rest of useEffect ...
 
     if (socket) {
       const handleSync = (event: any) => {
@@ -127,117 +134,256 @@ export const AuthView: React.FC = () => {
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
       <PageHeader 
         title="Authentication" 
-        subtitle="User access control powered by AuraDB Identity Engine"
+        subtitle="Manage user access, identity providers and security policies"
         action={
-          <button 
-            onClick={() => setIsAdding(!isAdding)}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            {isAdding ? 'Cancel' : 'Add User'}
-          </button>
+          <div className="flex gap-3">
+             <button 
+              onClick={() => setIsAdding(!isAdding)}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20 active:scale-95 uppercase tracking-widest"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              {isAdding ? 'Cancel' : 'New Identity'}
+            </button>
+          </div>
         }
       />
 
-      {isAdding && (
-        <motion.div 
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="mb-6 bg-blue-600/5 border border-blue-500/20 p-6 rounded-xl overflow-hidden"
-        >
-          <form onSubmit={handleAddUser} className="flex gap-4 items-end max-w-2xl">
-            <div className="flex-1 space-y-2">
-              <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">New User Email</label>
-              <input 
-                autoFocus
-                type="email" 
-                placeholder="user@example.com"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full bg-[#1A1A22] border border-[#2F2F37] rounded-lg px-4 py-2 text-sm text-zinc-300 focus:outline-none focus:border-blue-500/50"
-              />
-            </div>
-            <button 
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-lg shadow-blue-900/20"
-            >
-              Construct User
-            </button>
-          </form>
-        </motion.div>
-      )}
-
-      <div className="bg-[#111116] border border-[#1F1F23] rounded-xl overflow-hidden shadow-xl shadow-black/20">
-        <div className="p-4 border-b border-[#1F1F23] flex items-center justify-between bg-[#16161C]">
-          <div className="px-3 py-1 bg-zinc-800 rounded text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            Users ({filteredUsers.length})
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500" />
-            <input 
-              type="text" 
-              placeholder="Filter by identifier..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-[#1D1D23] border border-[#2F2F37] rounded-md py-1.5 pl-9 pr-3 text-xs text-zinc-300 focus:outline-none focus:border-blue-500/50 transition-all w-64"
-            />
-          </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider bg-[#16161C]">
-              <tr>
-                <th className="px-6 py-4">Identifier</th>
-                <th className="px-6 py-4">Providers</th>
-                <th className="px-6 py-4">Created</th>
-                <th className="px-6 py-4">Signed In</th>
-                <th className="px-6 py-4">User UID</th>
-                <th className="px-6 py-4 text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1F1F23]">
-              {filteredUsers.map((user) => (
-                <tr key={user.uid} className="hover:bg-blue-600/[0.02] transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-blue-600/10 group-hover:text-blue-400 transition-all">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <span className="text-zinc-200 font-medium">{user.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700 capitalize">
-                      {user.provider}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-zinc-400 tabular-nums">{user.created}</td>
-                  <td className="px-6 py-4 text-zinc-400 tabular-nums">{user.lastLogin}</td>
-                  <td className="px-6 py-4 font-mono text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors uppercase tracking-tight">
-                    {user.uid}........
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => deleteUser(user.uid)}
-                      className="p-2 text-zinc-600 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredUsers.length === 0 && (
-                <tr>
-                   <td colSpan={6} className="px-6 py-20 text-center text-zinc-600 text-sm italic">
-                      No users found matching "{search}"
-                   </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Auth Sub-navigation */}
+      <div className="flex items-center gap-6 mb-8 border-b border-[#1F1F23]">
+        {[
+          { id: 'users', label: 'Users', icon: Mail },
+          { id: 'providers', label: 'Providers', icon: Globe },
+          { id: 'settings', label: 'Settings', icon: Settings2 },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as AuthTab)}
+            className={cn(
+              "flex items-center gap-2 px-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all relative",
+              activeTab === tab.id ? "text-blue-400" : "text-zinc-600 hover:text-zinc-400"
+            )}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            {tab.label}
+            {activeTab === tab.id && (
+              <motion.div layoutId="authTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500" />
+            )}
+          </button>
+        ))}
       </div>
+
+      <AnimatePresence mode="wait">
+        {activeTab === 'users' ? (
+          <motion.div
+            key="users"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            {isAdding && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mb-8 bg-blue-600/5 border border-blue-500/20 p-8 rounded-2xl overflow-hidden"
+              >
+                <form onSubmit={handleAddUser} className="flex gap-4 items-end max-w-2xl">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Construct New Identity</label>
+                    <input 
+                      autoFocus
+                      type="email" 
+                      placeholder="e.g. engineer@aura.db"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="w-full bg-[#0A0A0C] border border-[#2F2F37] rounded-xl px-4 py-3 text-sm text-zinc-300 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-xl shadow-blue-900/40 transition-all active:scale-95"
+                  >
+                    Deploy Identity
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+            <div className="bg-[#111116] border border-[#1F1F23] rounded-2xl overflow-hidden shadow-2xl border-t border-t-zinc-800/50">
+              <div className="p-6 border-b border-[#1F1F23] flex items-center justify-between bg-[#16161C]/50">
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest bg-zinc-800/50 px-3 py-1 rounded">
+                    Total Identities: {filteredUsers.length}
+                  </span>
+                  <div className="flex items-center gap-2 text-[10px] text-emerald-500 font-bold uppercase tracking-widest">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Engine Healthy
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+                  <input 
+                    type="text" 
+                    placeholder="Search by UID or Email..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="bg-[#0A0A0C] border border-[#2F2F37] rounded-lg py-2 pl-10 pr-4 text-xs text-zinc-300 focus:outline-none focus:border-blue-500/50 transition-all w-80 placeholder:text-zinc-700"
+                  />
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="text-[10px] font-black text-zinc-600 uppercase tracking-widest bg-[#16161C]/80">
+                    <tr>
+                      <th className="px-6 py-4">User Identity</th>
+                      <th className="px-6 py-4">Role</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4">Provider</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#1F1F23]">
+                    {filteredUsers.map((user) => (
+                      <tr key={user.uid} className="hover:bg-blue-600/[0.03] transition-colors group">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 group-hover:bg-blue-600/10 group-hover:text-blue-400 group-hover:border-blue-500/20 transition-all">
+                              <User className="w-5 h-5" />
+                            </div>
+                            <div>
+                               <div className="text-sm font-bold text-zinc-200">{user.email}</div>
+                               <div className="text-[10px] text-zinc-600 font-mono mt-0.5">uid: {user.uid}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                           <div className="flex items-center gap-2">
+                              <Shield className="w-3 h-3 text-blue-500" />
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                                {user.uid === 'u3' ? 'System Admin' : user.uid === 'u1' ? 'Project Owner' : 'Developer'}
+                              </span>
+                           </div>
+                        </td>
+                        <td className="px-6 py-5">
+                           <div className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                              <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">Active</span>
+                           </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2 bg-zinc-800/50 self-start px-2 py-1 rounded border border-zinc-700/50">
+                             {user.provider === 'google.com' ? <Globe className="w-3 h-3 text-blue-400" /> : <Mail className="w-3 h-3 text-zinc-500" />}
+                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{user.provider}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                           <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-tighter">{user.uid}#aura</span>
+                        </td>
+                        <td className="px-6 py-5 text-[11px] text-zinc-500 font-medium">{user.created}</td>
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                             <button className="p-2 text-zinc-600 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                                <Settings2 className="w-4 h-4" />
+                             </button>
+                             <button 
+                              onClick={() => deleteUser(user.uid)}
+                              className="p-2 text-zinc-600 hover:text-red-500 hover:bg-red-400/10 rounded-lg transition-all"
+                             >
+                              <XCircle className="w-4 h-4" />
+                             </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        ) : activeTab === 'providers' ? (
+          <motion.div
+            key="providers"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {[
+              { id: 'email', name: 'Email / Password', icon: Mail, enabled: true, color: 'text-zinc-400' },
+              { id: 'google', name: 'Google Login', icon: Globe, enabled: true, color: 'text-blue-400' },
+              { id: 'github', name: 'GitHub Integration', icon: Github, enabled: false, color: 'text-white' },
+              { id: 'anonymous', name: 'Anonymous Auth', icon: ShieldAlert, enabled: false, color: 'text-amber-500' },
+            ].map(p => (
+              <div key={p.id} className="bg-[#111116] border border-[#1F1F23] p-8 rounded-2xl flex flex-col justify-between hover:border-zinc-700 transition-colors">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className={cn("p-3 bg-zinc-800 rounded-xl border border-zinc-700", p.color)}>
+                       <p.icon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white uppercase tracking-widest">{p.name}</h4>
+                      <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider">{p.enabled ? 'Service Active' : 'Service Paused'}</p>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "w-12 h-6 rounded-full relative cursor-pointer transition-all border",
+                    p.enabled ? "bg-blue-600 border-blue-500 shadow-[0_0_12px_rgba(37,99,235,0.2)]" : "bg-zinc-900 border-zinc-800"
+                  )}>
+                    <div className={cn(
+                      "absolute top-1 w-3.5 h-3.5 bg-white rounded-full transition-all shadow-md",
+                      p.enabled ? "right-1" : "left-1"
+                    )} />
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <button className="flex-1 py-3 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all rounded-xl">
+                    Configure API
+                  </button>
+                  <button className="flex-1 py-3 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/20 text-[10px] font-black uppercase tracking-widest text-blue-400 transition-all rounded-xl">
+                    View Docs
+                  </button>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div
+             key="settings"
+             initial={{ opacity: 0, y: 10 }}
+             animate={{ opacity: 1, y: 0 }}
+             exit={{ opacity: 0, y: -10 }}
+             className="bg-[#111116] border border-[#1F1F23] rounded-2xl p-8"
+          >
+             <h3 className="text-lg font-black text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+                <Shield className="w-6 h-6 text-blue-500" />
+                Security Engine Policies
+             </h3>
+             <div className="space-y-8">
+                {[
+                  { title: 'One Account Per Email', desc: 'Prevent multiple auth providers from linking to same address', enabled: true },
+                  { title: 'Email Enumeration Protection', desc: 'Mask whether an account exists during login attempts (Recommended)', enabled: true },
+                  { title: 'Authorized Domains', desc: 'Allow requests only from verified domain roots', enabled: true },
+                  { title: 'Session Persistence', desc: 'Automatically refresh tokens for persistent login', enabled: false },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center justify-between py-6 first:pt-0 last:pb-0 border-b last:border-0 border-zinc-800/50">
+                    <div className="max-w-2xl">
+                      <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-tight">{s.title}</h4>
+                      <p className="text-xs text-zinc-500 leading-relaxed">{s.desc}</p>
+                    </div>
+                    <button 
+                      onClick={() => success('Policy Updated', `${s.title} has been ${s.enabled ? 'deactivated' : 'activated'}.`)}
+                      className={cn(
+                      "px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                      s.enabled ? "bg-zinc-800 text-zinc-500 hover:text-white" : "bg-blue-600 text-white"
+                    )}>
+                      {s.enabled ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
+                ))}
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
