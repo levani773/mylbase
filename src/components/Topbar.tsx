@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, HelpCircle, LogOut, Settings, User, Shield, CreditCard, ChevronRight } from 'lucide-react';
+import { Search, Bell, HelpCircle, LogOut, Settings, User, Shield, CreditCard, ChevronRight, Terminal } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Service } from '../types';
 
 interface TopbarProps {
   onNavigate: (service: Service) => void;
+  onOpenActivityLog?: () => void;
 }
 
-export const Topbar: React.FC<TopbarProps> = ({ onNavigate }) => {
+export const Topbar: React.FC<TopbarProps> = ({ onNavigate, onOpenActivityLog }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
@@ -50,6 +51,13 @@ export const Topbar: React.FC<TopbarProps> = ({ onNavigate }) => {
       </div>
 
       <div className="flex items-center gap-4">
+        <button 
+          onClick={onOpenActivityLog}
+          className="p-2 text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
+        >
+          <Terminal className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold uppercase tracking-widest hidden lg:block">Activity</span>
+        </button>
         <button className="p-2 text-zinc-400 hover:text-white transition-colors">
           <HelpCircle className="w-5 h-5" />
         </button>

@@ -9,12 +9,16 @@ import {
   Code,
   Save,
   Loader2,
-  DatabaseZap
+  Filter,
+  ArrowUpDown,
+  Trash2,
+  Download
 } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { FirestoreCollection } from '../types';
+import { useToast } from './Toast';
 import { io } from 'socket.io-client';
 
 const socket = io();
@@ -25,8 +29,11 @@ export const FirestoreView: React.FC = () => {
   const [selectedColId, setSelectedColId] = useState<string>('');
   const [selectedDocId, setSelectedDocId] = useState<string>('');
   const [jsonValue, setJsonValue] = useState('');
-  const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [filterQuery, setFilterQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  
+  const { success, error, info } = useToast();
 
   useEffect(() => {
     fetchCollections();
@@ -97,16 +104,22 @@ export const FirestoreView: React.FC = () => {
 
       if (res.ok) {
         setData(newData);
-        setSaveStatus('Success: Changes committed to AuraDB Engine');
+        success('Changes Committed', 'Data has been successfully persisted to AuraDB Engine');
       } else {
         throw new Error('Failed to save to server');
       }
-      setTimeout(() => setSaveStatus(null), 3000);
     } catch (e) {
-      setSaveStatus('Error: ' + (e instanceof Error ? e.message : 'Invalid JSON'));
-      setTimeout(() => setSaveStatus(null), 3000);
+      error('Engine Sync Failed', e instanceof Error ? e.message : 'Invalid JSON');
     }
   };
+
+  const filteredDocs = selectedCol?.docs.filter(d => {
+    if (!filterQuery) return true;
+    const q = filterQuery.toLowerCase();
+    return d.id.toLowerCase().includes(q) || 
+           (typeof d.data?.name === 'string' && d.data.name.toLowerCase().includes(q)) ||
+           (typeof d.data?.title === 'string' && d.data.title.toLowerCase().includes(q));
+  });
 
   if (loading) return (
     <div className="h-full flex items-center justify-center">
@@ -168,10 +181,51 @@ export const FirestoreView: React.FC = () => {
         <div className="w-1/3 border-r border-[#1F1F23] flex flex-col bg-[#0D0D11]">
           <div className="p-3 border-b border-[#1F1F23] flex items-center justify-between text-zinc-500 uppercase tracking-widest font-black text-[9px]">
             Documents (/{selectedColId})
-            <Plus className="w-3 h-3 cursor-pointer hover:text-white" />
+            <div className="flex items-center gap-2">
+              <Plus className="w-3.5 h-3.5 cursor-pointer hover:text-white" />
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className={cn("p-0.5 rounded transition-colors", showFilters ? "text-blue-400 bg-blue-500/10" : "hover:text-white")}
+              >
+                <Filter className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
+
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden border-b border-[#1F1F23] bg-[#111116]/50"
+              >
+                <div className="p-3 space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
+                    <input 
+                      type="text" 
+                      value={filterQuery}
+                      onChange={(e) => setFilterQuery(e.target.value)}
+                      placeholder="Search ID, name, or title..." 
+                      className="w-full bg-[#1A1A20] border border-[#2F2F37] rounded-md py-2 pl-8 text-[11px] text-zinc-400 focus:outline-none focus:border-blue-600/50"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-[#1A1A20] border border-[#2F2F37] rounded text-[9px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300">
+                      <ArrowUpDown className="w-3 h-3" /> Sort
+                    </button>
+                    <button className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-[#1A1A20] border border-[#2F2F37] rounded text-[9px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-300">
+                      <Download className="w-3 h-3" /> Export
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="flex-1 overflow-y-auto">
-            {selectedCol?.docs.map(doc => (
+            {filteredDocs?.map(doc => (
               <button
                 key={doc.id}
                 onClick={() => handleDocSelect(doc.id)}
@@ -202,30 +256,21 @@ export const FirestoreView: React.FC = () => {
               <button 
                 onClick={handleSave}
                 disabled={!selectedDocId}
-                className="disabled:opacity-50 px-3 py-1 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all uppercase tracking-widest rounded flex items-center gap-2 active:scale-95"
+                className="disabled:opacity-50 px-3 py-1.5 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all uppercase tracking-widest rounded-lg flex items-center gap-2 active:scale-95 shadow-lg shadow-blue-900/40"
               >
-                <Save className="w-3 h-3" />
-                Save
+                <Save className="w-3.5 h-3.5" />
+                Commit Changes
               </button>
-              <MoreHorizontal className="w-4 h-4 text-zinc-600 cursor-pointer" />
+              <button className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
           <div className="flex-1 relative flex flex-col">
-            <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-700 pointer-events-none uppercase tracking-widest z-10">
+            <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-700 pointer-events-none uppercase tracking-widest z-10 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
               Live Preview
             </div>
-            {saveStatus && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={cn(
-                  "absolute bottom-4 right-4 px-4 py-2 rounded-lg text-xs font-bold z-20 shadow-2xl border",
-                  saveStatus.includes('Error') ? "bg-red-500/10 border-red-500/50 text-red-500" : "bg-emerald-500/10 border-emerald-500/50 text-emerald-500"
-                )}
-              >
-                {saveStatus}
-              </motion.div>
-            )}
             <textarea 
                value={jsonValue}
                onChange={(e) => setJsonValue(e.target.value)}
