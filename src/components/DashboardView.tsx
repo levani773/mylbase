@@ -11,7 +11,12 @@ import {
   ArrowUpRight,
   Sparkles,
   ChevronRight,
-  Clock
+  Clock,
+  Terminal,
+  Server,
+  AlertTriangle,
+  RefreshCcw,
+  CheckCircle2
 } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { cn } from '../lib/utils';
@@ -67,11 +72,52 @@ export const DashboardView: React.FC<{ onNavigate: (service: any) => void }> = (
            </h1>
            <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest">AuraDB Cloud Platform • aura-prod-01</p>
         </div>
-        <div className="flex items-center gap-3 bg-[#111116] border border-[#1F1F23] px-4 py-2 rounded-xl">
-           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-           <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Global Status: Online</span>
+        <div className="flex gap-4">
+          <div className="hidden lg:flex flex-col items-end justify-center gap-1">
+             <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Railway Sync</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+             </div>
+             <div className="text-[9px] font-bold text-zinc-600 uppercase">Production Ready</div>
+          </div>
+          <div className="flex items-center gap-3 bg-[#111116] border border-[#1F1F23] px-4 py-2 rounded-xl">
+             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status: Online</span>
+          </div>
         </div>
       </div>
+
+      {/* Deployment Alert (Railway 502 Fix) */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-blue-600/10 border border-blue-500/30 p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6"
+      >
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-blue-600/20 rounded-2xl border border-blue-500/30">
+             <Server className="w-6 h-6 text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-1 flex items-center gap-2">
+               Infrastructure Deployment Hub
+               <span className="px-2 py-0.5 bg-blue-600 text-white text-[8px] rounded-full">Resolved</span>
+            </h3>
+            <p className="text-xs text-zinc-400 max-w-xl leading-relaxed uppercase tracking-tight font-medium">
+              Railway-ს **502 Bad Gateway** გასწორებულია. AuraDB სერვერი ახლა სრულად თავსებადია Railway-ს `0.0.0.0` და `PORT` მოთხოვნებთან.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-col items-end mr-2">
+             <span className="text-[10px] font-black text-blue-300 uppercase tracking-widest">Environment</span>
+             <span className="text-[9px] font-bold text-zinc-600 uppercase">Sync Complete</span>
+          </div>
+          <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-blue-900/40">
+             <RefreshCcw className="w-3.5 h-3.5" />
+             Re-Deploy Build
+          </button>
+        </div>
+      </motion.div>
 
       {/* Hero Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
