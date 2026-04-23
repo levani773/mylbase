@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Folder, 
   FileJson, 
@@ -52,6 +52,9 @@ export const FirestoreView: React.FC = () => {
   const [filterQuery, setFilterQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [isGeneratingMock, setIsGeneratingMock] = useState(false);
+  
+  const [isDeleting, setIsDeleting] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   
   const { success, error, info } = useToast();
 
@@ -188,10 +191,7 @@ export const FirestoreView: React.FC = () => {
   const handleDeleteDoc = async () => {
     if (!selectedDocId || !selectedColId) return;
     
-    if (!confirm(`Are you sure you want to delete ${selectedDocId}? This action cannot be undone.`)) {
-      return;
-    }
-
+    setIsDeleting(true);
     try {
       const newData = data.map(col => {
         if (col.id === selectedColId) {
@@ -214,9 +214,13 @@ export const FirestoreView: React.FC = () => {
         setSelectedDocId('');
         setJsonValue('');
         success('Document Deleted', `${selectedDocId} has been removed from the engine.`);
+      } else {
+        throw new Error('Server rejected deletion');
       }
     } catch (e) {
       error('Deletion Failed', 'Stable link with AuraDB engine interrupted.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -460,14 +464,20 @@ export const FirestoreView: React.FC = () => {
                     Commit Changes
                   </button>
                   <div className="flex items-center bg-[#1A1A22] border border-[#2F2F37] rounded-lg overflow-hidden ml-1">
-                    <button className="p-1.5 text-zinc-500 hover:text-blue-400 transition-all hover:bg-blue-500/10 border-r border-[#2F2F37]">
+                    <button 
+                      onClick={() => editorRef.current?.focus()}
+                      className="p-1.5 text-zinc-500 hover:text-blue-400 transition-all hover:bg-blue-500/10 border-r border-[#2F2F37]"
+                      title="Edit JSON"
+                    >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button 
                       onClick={handleDeleteDoc}
-                      className="p-1.5 text-zinc-500 hover:text-red-400 transition-all hover:bg-red-500/10"
+                      disabled={isDeleting}
+                      className="p-1.5 text-zinc-500 hover:text-red-400 transition-all hover:bg-red-500/10 disabled:opacity-50"
+                      title="Delete Document"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                 </div>
@@ -478,6 +488,7 @@ export const FirestoreView: React.FC = () => {
                   Live Preview
                 </div>
                 <textarea 
+                   ref={editorRef}
                    value={jsonValue}
                    onChange={(e) => setJsonValue(e.target.value)}
                    className={cn(
