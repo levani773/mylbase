@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, MoreVertical, Plus, Search, Loader2, Shield, Settings2, Globe, Github, Chrome, ShieldAlert, CheckCircle2, XCircle, User as UserIcon } from 'lucide-react';
+import { Mail, MoreVertical, Plus, Search, Loader2, Shield, Settings2, Globe, Github, Chrome, ShieldAlert, CheckCircle2, XCircle, User as UserIcon, Code } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { motion, AnimatePresence } from 'motion/react';
 import { type User } from '../types';
 import { useToast } from './Toast';
 import { io } from 'socket.io-client';
 import { cn } from '../lib/utils';
+import { RegistrationPreview } from './RegistrationPreview';
 
-type AuthTab = 'users' | 'providers' | 'settings';
+type AuthTab = 'users' | 'providers' | 'settings' | 'templates';
 
 let socket: any;
 try {
@@ -153,6 +154,7 @@ export const AuthView: React.FC = () => {
         {[
           { id: 'users', label: 'Users', icon: Mail },
           { id: 'providers', label: 'Providers', icon: Globe },
+          { id: 'templates', label: 'Templates', icon: UserIcon },
           { id: 'settings', label: 'Settings', icon: Settings2 },
         ].map(tab => (
           <button
@@ -345,6 +347,51 @@ export const AuthView: React.FC = () => {
                 </div>
               </div>
             ))}
+          </motion.div>
+        ) : activeTab === 'templates' ? (
+          <motion.div
+            key="templates"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex flex-col items-center py-12"
+          >
+            <div className="mb-12 text-center max-w-2xl">
+              <h3 className="text-xl font-black text-white uppercase tracking-[0.2em] mb-4">UI Components & Templates</h3>
+              <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider leading-relaxed">
+                AuraDB-ს აქვს მზა დიზაინები თქვენი აპლიკაციებისთვის. აირჩიეთ სასურველი ფორმა და დააინტეგრირეთ AuraDB-ის ავტორიზაცია ერთ წუთში.
+              </p>
+            </div>
+            
+            <RegistrationPreview />
+            
+            <div className="mt-16 bg-[#111116] border border-[#1F1F23] p-8 rounded-3xl w-full max-w-3xl">
+               <div className="flex items-center gap-4 mb-6">
+                  <div className="p-3 bg-blue-600/10 rounded-2xl border border-blue-500/20">
+                     <Code className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-white uppercase tracking-widest">In-App Implementation</h4>
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Use our React SDK to sync this form with AuraDB</p>
+                  </div>
+               </div>
+               <div className="bg-[#0A0A0C] p-6 rounded-2xl border border-[#1F1F23] font-mono text-[11px] text-blue-300 overflow-x-auto">
+                  <pre>{`// Example: Connect this form to AuraDB
+import { useAuraAuth } from '@auradb/sdk-react';
+
+const { signUp } = useAuraAuth();
+
+const handleRegister = async (data) => {
+  const { user, error } = await signUp({
+    email: data.email,
+    password: data.password,
+    name: data.name
+  });
+
+  if (user) console.log('AuraDB Identity Registered!');
+};`}</pre>
+               </div>
+            </div>
           </motion.div>
         ) : (
           <motion.div
