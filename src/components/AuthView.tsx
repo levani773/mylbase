@@ -7,6 +7,11 @@ import { useToast } from './Toast';
 import { io } from 'socket.io-client';
 import { cn } from '../lib/utils';
 import { RegistrationPreview } from './RegistrationPreview';
+import { Service } from '../types';
+
+interface AuthViewProps {
+  onNavigate?: (service: Service) => void;
+}
 
 type AuthTab = 'users' | 'providers' | 'settings' | 'templates';
 
@@ -21,7 +26,7 @@ try {
   console.warn('Socket init failed', e);
 }
 
-export const AuthView: React.FC = () => {
+export const AuthView: React.FC<AuthViewProps> = ({ onNavigate }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -363,7 +368,7 @@ export const AuthView: React.FC = () => {
               </p>
             </div>
             
-            <RegistrationPreview />
+            <RegistrationPreview onNavigate={onNavigate} />
             
             <div className="mt-16 bg-[#111116] border border-[#1F1F23] p-8 rounded-3xl w-full max-w-3xl">
                <div className="flex items-center gap-4 mb-6">

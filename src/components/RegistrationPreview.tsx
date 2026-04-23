@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { Mail, User, Lock, Chrome, Info, CheckCircle2, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Mail, User, Lock, Chrome, Info, CheckCircle2, ChevronRight, X, Loader2, PartyPopper } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useToast } from './Toast';
+import { Service } from '../types';
 
-export const RegistrationPreview: React.FC = () => {
+interface RegistrationPreviewProps {
+  onNavigate?: (service: Service) => void;
+}
+
+export const RegistrationPreview: React.FC<RegistrationPreviewProps> = ({ onNavigate }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { success, error } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,8 +38,13 @@ export const RegistrationPreview: React.FC = () => {
       });
 
       if (res.ok) {
+        setIsSuccess(true);
         success('რეგისტრაცია წარმატებულია', `${formData.name}, თქვენი ანგარიში AuraDB-ში გააქტიურებულია!`);
-        setFormData({ name: '', email: '', password: '' });
+        
+        // Simulate redirect logic
+        setTimeout(() => {
+          if (onNavigate) onNavigate('dashboard');
+        }, 2500);
       } else {
         throw new Error();
       }
@@ -43,6 +54,29 @@ export const RegistrationPreview: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md mx-auto bg-[#16161A] border border-[#1F1F23] rounded-[2rem] p-12 flex flex-col items-center justify-center text-center shadow-2xl"
+      >
+        <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 border border-emerald-500/20">
+          <PartyPopper className="w-10 h-10 text-emerald-400" />
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase tracking-widest mb-2">მოგესალმებით!</h2>
+        <p className="text-zinc-500 text-sm font-medium uppercase tracking-widest mb-8 leading-relaxed">
+           თქვენი AuraDB Identity წარმატებით შეიქმნა.
+        </p>
+        
+        <div className="flex items-center gap-3 bg-zinc-800/30 px-6 py-3 rounded-2xl border border-zinc-800">
+          <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+          <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Redirecting to Dashboard...</span>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto bg-[#16161A] border border-[#1F1F23] rounded-[2rem] overflow-hidden shadow-2xl shadow-black">

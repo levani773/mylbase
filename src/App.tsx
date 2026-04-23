@@ -66,7 +66,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardView onNavigate={setActiveService} />;
       case 'auth':
-        return <AuthView />;
+        return <AuthView onNavigate={setActiveService} />;
       case 'firestore':
         return <FirestoreView />;
       case 'storage':
