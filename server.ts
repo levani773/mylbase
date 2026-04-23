@@ -346,6 +346,20 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  app.delete("/api/db/collections/:colId/documents/:docId", async (req, res) => {
+    const { colId, docId } = req.params;
+    const db = await getDB();
+    
+    const colIndex = db.collections.findIndex((c: any) => c.id === colId);
+    if (colIndex === -1) return res.status(404).json({ error: "Collection not found" });
+    
+    db.collections[colIndex].docs = db.collections[colIndex].docs.filter((d: any) => d.id !== docId);
+    
+    await saveDB(db);
+    broadcastSync('db_changed', db.collections);
+    res.json({ success: true });
+  });
+
   // Security Rules
   app.get("/api/rules", async (req, res) => {
     const db = await getDB();

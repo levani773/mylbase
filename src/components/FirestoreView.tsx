@@ -193,32 +193,33 @@ export const FirestoreView: React.FC = () => {
     
     setIsDeleting(true);
     try {
-      const newData = data.map(col => {
-        if (col.id === selectedColId) {
-          return {
-            ...col,
-            docs: col.docs.filter(doc => doc.id !== selectedDocId)
-          };
-        }
-        return col;
-      });
-
-      const res = await fetch('/api/db/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collections: newData })
+      const res = await fetch(`/api/db/collections/${selectedColId}/documents/${selectedDocId}`, {
+        method: 'DELETE'
       });
 
       if (res.ok) {
+        // Optimistic update - filter local data
+        const newData = data.map(col => {
+          if (col.id === selectedColId) {
+            return {
+              ...col,
+              docs: col.docs.filter(doc => doc.id !== selectedDocId)
+            };
+          }
+          return col;
+        });
+
         setData(newData);
         setSelectedDocId('');
         setJsonValue('');
-        success('Document Deleted', `${selectedDocId} has been removed from the engine.`);
+        success('Document Deleted', `${selectedDocId} has been removed from AuraDB.`);
       } else {
-        throw new Error('Server rejected deletion');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Server rejected deletion');
       }
     } catch (e) {
-      error('Deletion Failed', 'Stable link with AuraDB engine interrupted.');
+      console.error('Delete failed:', e);
+      error('Deletion Failed', e instanceof Error ? e.message : 'Stable link with AuraDB engine interrupted.');
     } finally {
       setIsDeleting(false);
     }
