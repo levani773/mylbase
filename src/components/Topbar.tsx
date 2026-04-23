@@ -31,35 +31,39 @@ export const Topbar: React.FC<TopbarProps> = ({ onNavigate, onOpenActivityLog })
 
   return (
     <header className="h-16 border-b border-[#1F1F23] bg-[#0A0A0C] flex items-center justify-between px-8 sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
-      <div className="flex items-center flex-1 max-w-xl">
-        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600 mr-8">
-           <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-8 flex-1">
+        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+           <div className="flex items-center gap-1.5 whitespace-nowrap">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
               Region: US-EAST1
            </div>
            <div className="w-1 h-1 bg-zinc-800 rounded-full"></div>
-           <div className="text-blue-500/80">Env: Production</div>
+           <div className="text-blue-500/80 whitespace-nowrap">Env: Production</div>
         </div>
-        <div className="relative w-full group hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
+        
+        <div className="relative w-full max-w-sm group hidden md:block">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600 group-focus-within:text-blue-400 transition-colors" />
           <input 
             type="text" 
-            placeholder="Search documentation, databases, or help..."
-            className="w-full bg-[#16161A] border border-[#1F1F23] rounded-lg py-2 pl-10 pr-4 text-sm text-zinc-300 focus:outline-none focus:border-blue-600/50 focus:ring-1 focus:ring-blue-600/20 transition-all"
+            placeholder="Search document"
+            className="w-full bg-[#111116] border border-[#1F1F23] rounded-lg py-1.5 pl-9 pr-12 text-sm text-zinc-400 placeholder:text-zinc-600 focus:outline-none focus:border-blue-600/50 focus:ring-1 focus:ring-blue-600/20 transition-all font-medium"
           />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-[#1F1F23] bg-[#16161A] text-[9px] font-bold text-zinc-600 group-focus-within:border-blue-500/30 group-focus-within:text-blue-400 transition-all">
+            ⌘K
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <button 
           onClick={onOpenActivityLog}
-          className="p-2 text-zinc-400 hover:text-white transition-colors flex items-center gap-2 group"
+          className="p-2 text-zinc-400 hover:text-white transition-colors flex items-center gap-1 group"
+          title="Terminal"
         >
-          <Terminal className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold uppercase tracking-widest hidden lg:block">Activity</span>
+          <Terminal className="w-4 h-4 group-hover:scale-110 transition-transform" />
         </button>
-        <button className="p-2 text-zinc-400 hover:text-white transition-colors">
-          <HelpCircle className="w-5 h-5" />
+        <button className="p-2 text-zinc-400 hover:text-white transition-colors" title="Help">
+          <HelpCircle className="w-4 h-4" />
         </button>
         
         <div className="relative" ref={notificationsRef}>
@@ -67,8 +71,8 @@ export const Topbar: React.FC<TopbarProps> = ({ onNavigate, onOpenActivityLog })
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
             className={`p-2 transition-colors relative rounded-lg ${isNotificationsOpen ? 'bg-white/5 text-white' : 'text-zinc-400 hover:text-white'}`}
           >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full border-2 border-[#0A0A0C]"></span>
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-blue-500 rounded-full border border-[#0A0A0C]"></span>
           </button>
 
           <AnimatePresence>
@@ -81,8 +85,8 @@ export const Topbar: React.FC<TopbarProps> = ({ onNavigate, onOpenActivityLog })
                 className="absolute right-0 mt-2 w-80 bg-[#16161A] border border-[#1F1F23] rounded-xl shadow-2xl overflow-hidden z-50 shadow-black/50"
               >
                 <div className="p-4 border-b border-[#1F1F23] flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white">Notifications</h3>
-                  <button className="text-[10px] text-blue-400 hover:text-blue-300 font-medium">Mark all as read</button>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-white">Notifications</h3>
+                  <button className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-tighter">Mark all as read</button>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {[
@@ -121,7 +125,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onNavigate, onOpenActivityLog })
           >
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-white">Levani Ch.</p>
-              <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-tighter">Pro Tier</p>
+              <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest leading-none">PRO TIER</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 border border-blue-500/30 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
               LC

@@ -17,7 +17,8 @@ import {
   Layers,
   Zap,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Edit2
 } from 'lucide-react';
 import { PageHeader } from './PageHeader';
 import { cn } from '../lib/utils';
@@ -184,6 +185,41 @@ export const FirestoreView: React.FC = () => {
     }
   };
 
+  const handleDeleteDoc = async () => {
+    if (!selectedDocId || !selectedColId) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedDocId}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const newData = data.map(col => {
+        if (col.id === selectedColId) {
+          return {
+            ...col,
+            docs: col.docs.filter(doc => doc.id !== selectedDocId)
+          };
+        }
+        return col;
+      });
+
+      const res = await fetch('/api/db/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: newData })
+      });
+
+      if (res.ok) {
+        setData(newData);
+        setSelectedDocId('');
+        setJsonValue('');
+        success('Document Deleted', `${selectedDocId} has been removed from the engine.`);
+      }
+    } catch (e) {
+      error('Deletion Failed', 'Stable link with AuraDB engine interrupted.');
+    }
+  };
+
   const generateMockData = async () => {
     if (!selectedColId) {
       info('Context Required', 'Please select a collection first so Aura AI knows the schema target.');
@@ -251,10 +287,13 @@ export const FirestoreView: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col animate-in fade-in duration-700">
-      <PageHeader 
-        title="Firestore Database" 
-        subtitle="NoSQL cloud database powered by the local AuraDB Engine"
-      />
+      <div className="mb-10">
+        <h1 className="text-5xl font-serif italic font-black text-white mb-3 tracking-tight">Firestore Database</h1>
+        <div className="flex items-center gap-3">
+          <div className="h-px w-8 bg-blue-600/60"></div>
+          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">NoSQL Cloud Database powered by the local AuraDB Engine</p>
+        </div>
+      </div>
 
       <div className="flex-1 min-h-0 bg-[#0F0F12] border border-[#1F1F23] rounded-2xl overflow-hidden flex shadow-2xl shadow-black/40">
         {/* Collections */}
@@ -407,7 +446,7 @@ export const FirestoreView: React.FC = () => {
                   <button 
                     onClick={generateMockData}
                     disabled={isGeneratingMock || !selectedColId}
-                    className="disabled:opacity-50 px-3 py-1.5 text-[10px] font-bold text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 transition-all uppercase tracking-widest rounded-lg flex items-center gap-2 border border-blue-500/20"
+                    className="disabled:opacity-50 px-3 py-1.5 text-[10px] font-bold text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 transition-all uppercase tracking-widest rounded-lg flex items-center gap-2 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]"
                   >
                     {isGeneratingMock ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                     Aura AI Generate
@@ -415,19 +454,27 @@ export const FirestoreView: React.FC = () => {
                   <button 
                     onClick={handleSave}
                     disabled={!selectedDocId}
-                    className="disabled:opacity-50 px-3 py-1.5 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all uppercase tracking-widest rounded-lg flex items-center gap-2 active:scale-95 shadow-lg shadow-blue-900/40"
+                    className="disabled:opacity-50 px-3 py-1.5 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 transition-all uppercase tracking-widest rounded-lg flex items-center gap-2 active:scale-95 shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)]"
                   >
                     <Save className="w-3.5 h-3.5" />
                     Commit Changes
                   </button>
-                  <button className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center bg-[#1A1A22] border border-[#2F2F37] rounded-lg overflow-hidden ml-1">
+                    <button className="p-1.5 text-zinc-500 hover:text-blue-400 transition-all hover:bg-blue-500/10 border-r border-[#2F2F37]">
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={handleDeleteDoc}
+                      className="p-1.5 text-zinc-500 hover:text-red-400 transition-all hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex-1 relative flex flex-col">
-                <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-700 pointer-events-none uppercase tracking-widest z-10 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                <div className="absolute top-4 right-4 text-[10px] font-mono text-zinc-700 pointer-events-none uppercase tracking-widest z-10 flex items-center gap-2 bg-[#0B0B0F]/80 backdrop-blur-sm px-2 py-1 rounded border border-[#1F1F23]">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                   Live Preview
                 </div>
                 <textarea 
@@ -441,7 +488,7 @@ export const FirestoreView: React.FC = () => {
                    disabled={!selectedDocId}
                 />
                 {jsonError && (
-                  <div className="absolute bottom-4 left-6 right-6 bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-center gap-3 animate-in slide-in-from-bottom-2">
+                  <div className="absolute bottom-4 left-6 right-6 bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-center gap-3 animate-in slide-in-from-bottom-2 backdrop-blur-sm">
                     <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shrink-0"></span>
                     <span className="text-[10px] font-mono text-red-400 uppercase tracking-widest truncate">
                       Syntax Error: {jsonError}
@@ -449,9 +496,9 @@ export const FirestoreView: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div className="p-4 border-t border-[#1F1F23] flex items-center gap-3">
-                 <Code className="w-4 h-4 text-blue-500" />
-                 <div className="text-[10px] text-zinc-500 italic">
+              <div className="p-4 border-t border-[#1F1F23] flex items-center gap-3 bg-[#0D0D11]">
+                 <Code className="w-3.5 h-3.5 text-blue-500" />
+                 <div className="text-[10px] text-zinc-600 italic font-medium">
                    Hint: Changes are persisted to the server-side AuraDB Engine.
                  </div>
               </div>
