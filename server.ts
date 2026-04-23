@@ -86,8 +86,6 @@ async function startServer() {
     cors: { origin: "*" }
   });
   const PORT = Number(process.env.PORT) || 3000;
-  
-  // Set explicit Port for development/production
   app.set("port", PORT);
 
   await ensureDB();
